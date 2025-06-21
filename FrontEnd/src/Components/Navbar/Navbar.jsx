@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../Login/authSlice"; // Update path if needed
+import logoUrl from "../../Photos/Clinic.jpg";
 
-const logoUrl = "https://img.freepik.com/premium-vector/minimalist-logo-design-any-corporate-brand-business-company_1253202-77511.jpg";
+
 
 const Navbar = () => {
   const dispatch = useDispatch();

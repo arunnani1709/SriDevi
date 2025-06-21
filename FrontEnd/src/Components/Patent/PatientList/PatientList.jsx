@@ -26,18 +26,20 @@ const PatientList = () => {
     fetchPatients();
   }, []);
 
-  const handleSearch = (e) => {
-    const value = e.target.value.toLowerCase();
-    setSearchTerm(value);
+const handleSearch = (e) => {
+  const value = e.target.value.toLowerCase(); // normalize input
+  setSearchTerm(e.target.value); // preserve original input in the textbox
 
-    const filtered = patients.filter(
-      (p) =>
-        p.name.toLowerCase().includes(value) ||
-        p.clinicId.toLowerCase().includes(value) ||
-        p.phone.includes(value)
-    );
-    setFilteredPatients(filtered);
-  };
+  const searchValue = value.trim().toLowerCase();
+
+ const filtered = patients.filter((p) =>
+  (p.name && p.name.toLowerCase().includes(searchValue)) ||
+  (p.clinicId && p.clinicId.toLowerCase().includes(searchValue)) ||
+  (p.phone && p.phone.toString().includes(searchValue))
+);
+
+  setFilteredPatients(filtered);
+};
 
   const handleView = (patient) => {
     navigate(`/patients/${patient.clinicId}`, { state: { patient } });
