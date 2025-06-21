@@ -42,6 +42,10 @@ const AddPatient = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+     if (!formData.sex) {
+    alert("Please select the patient's sex.");
+    return;
+  }
     try {
       const response = await fetch("http://localhost:3001/api/patients", {
         method: "POST",
@@ -60,6 +64,9 @@ const AddPatient = () => {
           visitDate: "",
           clinicId: "",
         });
+         setTimeout(() => {
+        setSuccess(false);
+      }, 2000);
       } else {
         alert("Failed to add patient.");
       }
