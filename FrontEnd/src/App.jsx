@@ -12,7 +12,6 @@ import PatientDetails from './Components/Patent/PatientDetails/PatientDetails'; 
 import AddMedicine from './Components/Medicin/AddMedicine/AddMedicine';
 import MedicineList from './Components/Medicin/MedicineList/MedicineList';
 
-
 const App = () => {
   return (
     <Provider store={store}>
@@ -25,6 +24,7 @@ const App = () => {
            <Route path="/patients/:id" element={<PatientDetails />} />
            <Route path="/add-medicine" element={<AddMedicine />} />
            <Route path="/medicine-list" element={<MedicineList/>} />
+           
         </Routes>
       </Router>
     </Provider>

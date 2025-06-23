@@ -12,6 +12,7 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
     "@tailwindcss/cli": "^4.1.10",
+    "axios": "^1.10.0",
     "html2pdf.js": "^0.10.3",
     "lucide-react": "^0.516.0",
     "react": "^19.1.0",

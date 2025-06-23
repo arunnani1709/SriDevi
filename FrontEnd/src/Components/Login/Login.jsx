@@ -31,7 +31,7 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-tr from-blue-100 via-white to-blue-200 flex items-center justify-center">
       <div className="w-full max-w-md bg-white shadow-xl rounded-xl p-8">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-blue-700">Login</h1>
+          <h1 className="text-2xl font-bold text-blue-700">Sri Devi Ayurveda Clinic</h1>
         </div>
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
