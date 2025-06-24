@@ -1,16 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../Login/authSlice"; // Update path if needed
+import { logout } from "../Login/authSlice";
 import logoUrl from "../../Photos/Clinic.jpg";
-
-
 
 const Navbar = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user } = useSelector((state) => state.auth);
+  const location = useLocation();
 
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -19,10 +18,9 @@ const Navbar = () => {
     navigate("/");
   };
 
-  const toggleDropdown = () => {
-    setShowDropdown((prev) => !prev);
-  };
+  const toggleDropdown = () => setShowDropdown((prev) => !prev);
 
+  // 👂 Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -33,21 +31,33 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isOnDashboard = location.pathname === "/";
+
   return (
     <nav className="bg-green-700 px-6 py-3 flex justify-between items-center shadow-md relative">
-      {/* Left: Logo, Clinic Name & Home */}
-      <div className="flex items-center space-x-6">
-        <div className="flex items-center space-x-3">
-          <img src={logoUrl} alt="Clinic Logo" className="h-10 w-10 rounded-full" />
-          <span className="text-xl font-bold text-white">Sri Devi Ayurveda Clinic</span>
-        </div>
-
-        
+      {/* Left: Logo + Name */}
+      <div className="flex items-center space-x-3">
+        <img src={logoUrl} alt="Clinic Logo" className="h-10 w-10 rounded-full" />
+        <span className="text-xl font-bold text-white">Sri Devi Ayurveda Clinic</span>
       </div>
 
-      {/* Right: User Info & Dropdown */}
-      <div className="relative flex items-center space-x-4" ref={dropdownRef}>
-        {user && (
+      {/* Right Section */}
+      <div className="flex items-center space-x-4" ref={dropdownRef}>
+        {isOnDashboard ? (
+          <button
+            onClick={() => navigate("/login")}
+            className="bg-white text-green-700 px-4 py-2 rounded-md font-semibold hover:bg-gray-100 transition"
+          >
+            Login
+          </button>
+        ) : !isAuthenticated || !user ? (
+          <button
+            onClick={() => navigate("/login")}
+            className="bg-white text-green-700 px-4 py-2 rounded-md font-semibold hover:bg-gray-100 transition"
+          >
+            Login
+          </button>
+        ) : (
           <>
             <span className="text-white font-semibold hidden sm:block">
               Dr. {user.name}
