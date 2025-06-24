@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import AddMedicine from "../AddMedicine/AddMedicine";
+import AddInduviualPatientMedicine from "../AddInduviualPatientMedicine/AddInduviualPatientMedicine";
 
 const DoctorNotes = () => {
   const [doctorNotes, setDoctorNotes] = useState([]);
@@ -158,7 +158,7 @@ const DoctorNotes = () => {
               ))}
 
               {!note.saved && (
-                <AddMedicine
+                <AddInduviualPatientMedicine
                   shortForm={shortForm}
                   setShortForm={setShortForm}
                   showSuggestions={showSuggestions}
