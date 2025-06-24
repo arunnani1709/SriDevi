@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ChevronDown, ChevronUp, UserPlus, Home, Pill } from 'lucide-react';
 
-const Sidebar = () => {
+const Sidebar = ({ toggleSidebar }) => {
   const [openDropdown, setOpenDropdown] = useState(null);
 
   const toggleDropdown = (section) => {
@@ -17,13 +17,20 @@ const Sidebar = () => {
     'bg-green-100 text-green-800 shadow font-semibold';
 
   return (
-    <div
-      className="min-h-screen bg-[#f0fdf4] p-6 shadow-md flex flex-col"
-      style={{ width: '300px' }}
-    >
+    <div className="w-72 min-h-full bg-[#f0fdf4] p-2 shadow-md flex flex-col">
+     <div className="flex justify-end mb-1">
+          <button
+                 onClick={toggleSidebar}
+          className="bg-red-400 text-white px-2 py-0.5 text-sm rounded-md hover:bg-red-600 transition">
+             -
+         </button>
+         </div>
+
+
       <h2 className="text-3xl font-bold text-green-800 mb-6 text-center tracking-wide">
         Doctor Portal
       </h2>
+      
 
       {/* Home Link */}
       <div className="bg-white/80 backdrop-blur rounded-xl p-2 mb-4 shadow-inner">
@@ -110,8 +117,20 @@ const Sidebar = () => {
             </NavLink>
           </div>
         )}
+        
+      </div>
+     <div className="mt-6 bg-white/80 backdrop-blur rounded-xl p-2 space-y-2 shadow-inner  ">
+        <NavLink
+          to="/about-us"
+          className={({ isActive }) =>
+            `${baseLink} ${isActive ? activeStyle : linkStyle}`
+          }
+        >
+          About Us
+        </NavLink>
       </div>
     </div>
+    
   );
 };
 
