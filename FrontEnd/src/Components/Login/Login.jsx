@@ -5,6 +5,7 @@ import { loginUser } from "./authSlice";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import ClinicLogo from "../../Photos/Clinic.jpg"; // ✅ Import logo
 
 const Login = () => {
   const [credentials, setCredentials] = useState({ username: "", password: "" });
@@ -28,8 +29,17 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-blue-100 via-white to-blue-200 flex items-center justify-center">
-      <div className="w-full max-w-md bg-white shadow-xl rounded-xl p-8">
+    <div
+      className="min-h-screen flex items-center justify-center bg-no-repeat bg-top bg-contain"
+      style={{
+        backgroundImage: `url(${ClinicLogo})`,
+        backgroundSize: "300px",
+        backgroundPosition: "top center",
+        backgroundRepeat: "no-repeat",
+        paddingTop: "180px", // Adjust to push form below the logo
+      }}
+    >
+      <div className="w-full max-w-md bg-white bg-opacity-90 shadow-xl rounded-xl p-8">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-blue-700">Sri Devi Ayurveda Clinic</h1>
         </div>

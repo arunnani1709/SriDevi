@@ -94,7 +94,7 @@ const Dashboard = () => {
             </h3>
 
             <div className="w-full flex justify-center overflow-hidden">
-              <div className="w-[90%] max-w-12xl overflow-hidden">
+              <div className="w-[100%] max-w-6xl overflow-hidden">
                 <div className="flex animate-slide gap-6">
                   {[
                     { src: BackPain, title: "Back Pain" },
