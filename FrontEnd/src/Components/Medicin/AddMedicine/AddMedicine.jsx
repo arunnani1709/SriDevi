@@ -1,43 +1,66 @@
 import React, { useState } from 'react';
 import Sidebar from '../../Sidebar/Sidebar';
 import Navbar from '../../Navbar/Navbar';
-import axios from 'axios';
 
 const AddMedicine = () => {
   const [medicine, setMedicine] = useState({
     name: '',
     code: '',
     quantity: '',
-    type: '', // New field for type
+    type: '',
   });
+
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
+  const [dummyMedicines, setDummyMedicines] = useState([]); // local "DB"
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setMedicine((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setMessage(null);
     setError(null);
 
-    if (!medicine.name || !medicine.code || !medicine.quantity || !medicine.type) {
+    const name = medicine.name.trim();
+    const code = medicine.code.trim();
+    const quantity = medicine.quantity.trim();
+    const type = medicine.type.trim();
+
+    if (!name || !code || !quantity || !type) {
       setError('All fields are required');
       return;
     }
 
-    try {
-      const res = await axios.post('/api/medicines', medicine);
-      setMessage(res.data.message || 'Medicine saved successfully');
-      setMedicine({ name: '', code: '', quantity: '', type: '' });
-    } catch (err) {
-      console.error(err);
-      setError(
-        err.response?.data?.error || 'Failed to save medicine. Please try again.'
-      );
+    // Check if medicine with same name, code, and type exists
+    const index = dummyMedicines.findIndex(
+      (m) =>
+        m.name.toLowerCase() === name.toLowerCase() &&
+        m.code.toLowerCase() === code.toLowerCase() &&
+        m.type === type
+    );
+
+    if (index !== -1) {
+      // Update quantity
+      const updatedMedicines = [...dummyMedicines];
+      updatedMedicines[index].quantity += parseInt(quantity);
+      setDummyMedicines(updatedMedicines);
+      setMessage(`Quantity updated for "${name}"`);
+    } else {
+      // Add new
+      const newMedicine = {
+        name,
+        code,
+        quantity: parseInt(quantity),
+        type,
+      };
+      setDummyMedicines([...dummyMedicines, newMedicine]);
+      setMessage('Medicine saved successfully');
     }
+
+    setMedicine({ name: '', code: '', quantity: '', type: '' });
   };
 
   return (
@@ -47,7 +70,7 @@ const AddMedicine = () => {
         <Sidebar />
         <div className="max-w-xl w-full mx-auto mt-10 bg-white p-6 rounded-lg shadow">
           <h2 className="text-2xl font-semibold text-green-800 mb-6">
-            Add / Update Medicine
+            Add / Update Medicine (Demo Mode)
           </h2>
 
           {message && (
@@ -109,6 +132,33 @@ const AddMedicine = () => {
               Save Medicine
             </button>
           </form>
+
+          {/* Show dummy table */}
+          {dummyMedicines.length > 0 && (
+            <div className="mt-10">
+              <h3 className="text-xl font-bold mb-2">Saved Medicines</h3>
+              <table className="w-full border text-sm">
+                <thead className="bg-green-100">
+                  <tr>
+                    <th className="border px-2 py-1">Name</th>
+                    <th className="border px-2 py-1">Code</th>
+                    <th className="border px-2 py-1">Quantity</th>
+                    <th className="border px-2 py-1">Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dummyMedicines.map((m, idx) => (
+                    <tr key={idx}>
+                      <td className="border px-2 py-1">{m.name}</td>
+                      <td className="border px-2 py-1">{m.code}</td>
+                      <td className="border px-2 py-1">{m.quantity}</td>
+                      <td className="border px-2 py-1">{m.type}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

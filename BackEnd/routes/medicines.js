@@ -1,20 +1,20 @@
 // routes/medicine.js
 import express from "express";
 import Medicine from "../models/Medicine.js";
-
+ 
 const router = express.Router();
-
+ 
 // Add or update medicine
 router.post("/", async (req, res) => {
   const { name, code, quantity, type } = req.body;
-
+ 
   if (!name || !code || !quantity || !type) {
     return res.status(400).json({ error: "All fields are required." });
   }
-
+ 
   try {
     let medicine = await Medicine.findOne({ where: { code } });
-
+ 
     if (medicine) {
       // Update existing medicine's quantity and optionally type
       medicine.quantity += parseInt(quantity);
@@ -33,7 +33,7 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "Failed to save medicine." });
   }
 });
-
+ 
 // Get all medicines
 router.get("/", async (req, res) => {
   try {
@@ -44,5 +44,5 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch medicines." });
   }
 });
-
+ 
 export default router;
