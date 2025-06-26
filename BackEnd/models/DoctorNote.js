@@ -10,6 +10,7 @@ const DoctorNote = sequelize.define("DoctorNote", {
   clinicId: {
     type: DataTypes.STRING, // ⬅️ fix to STRING to match Patient.clinicId
     allowNull: false,
+    
   },
   visitDate: {
     type: DataTypes.DATEONLY,

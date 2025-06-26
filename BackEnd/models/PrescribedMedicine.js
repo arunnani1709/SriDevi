@@ -1,3 +1,4 @@
+// models/PrescribedMedicine.js
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 import DoctorNote from "./DoctorNote.js";
@@ -15,6 +16,14 @@ const PrescribedMedicine = sequelize.define("PrescribedMedicine", {
       model: DoctorNote,
       key: "id",
     },
+  },
+  clinicId: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  visitDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
   },
   code: DataTypes.STRING,
   name: DataTypes.STRING,

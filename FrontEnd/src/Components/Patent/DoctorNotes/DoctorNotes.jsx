@@ -75,28 +75,36 @@ const DoctorNotes = ({ clinicId }) => {
     );
   };
 
-  const handleSave = async (id) => {
-    const note = doctorNotes.find((n) => n.id === id);
+const handleSave = async (id) => {
+  const note = doctorNotes.find((n) => n.id === id);
 
-    try {
-      await axios.post("/api/notes", {
-        clinicId,
-        visitDate: note.visitDate,
-        complaint: note.complaint,
-        diagnosis: note.diagnosis,
-        tests: note.tests,
-        prescription: note.prescription,
-        medicines: note.medicines,
-      });
+  // Ensure each medicine includes clinicId and visitDate for backend use
+  const enrichedMedicines = note.medicines.map((med) => ({
+    ...med,
+    clinicId,
+    visitDate: note.visitDate,
+  }));
 
-      setDoctorNotes((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, saved: true } : n))
-      );
-    } catch (err) {
-      console.error("Error saving note:", err);
-      alert("Failed to save doctor's note.");
-    }
-  };
+  try {
+    await axios.post("/api/notes", {
+      clinicId,
+      visitDate: note.visitDate,
+      complaint: note.complaint,
+      diagnosis: note.diagnosis,
+      tests: note.tests,
+      prescription: note.prescription,
+      medicines: enrichedMedicines,
+    });
+
+    setDoctorNotes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, saved: true } : n))
+    );
+  } catch (err) {
+    console.error("Error saving note:", err);
+    alert("Failed to save doctor's note.");
+  }
+};
+
 
 
   const toggleDropdown = (id) => {
