@@ -1,4 +1,3 @@
-// routes/medicines.js
 import express from 'express';
 import { Medicine } from '../models/Medicine.js';
 
@@ -60,12 +59,14 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Deduct medicine quantity by code + type
+// ✅ Deduct medicine quantity by code + type
 router.put('/:code/:type/deduct', async (req, res) => {
   const { code, type } = req.params;
-  const { quantity } = req.body;
+  let { quantity } = req.body;
 
-  if (typeof quantity !== 'number' || quantity <= 0) {
+  quantity = parseInt(quantity); // ✅ Ensure it's treated as a number
+
+  if (isNaN(quantity) || quantity <= 0) {
     return res.status(400).json({ error: 'Valid quantity is required.' });
   }
 
@@ -78,31 +79,25 @@ router.put('/:code/:type/deduct', async (req, res) => {
       return res.status(404).json({ error: 'Medicine not found.' });
     }
 
-    if (type === 'Kashya') {
-      // Deduct from bottles
-      if (medicine.bottles < quantity) {
-        return res.status(400).json({ error: 'Not enough bottles in stock.' });
-      }
-      medicine.bottles -= quantity;
-    } else if (type === 'Tablet') {
-      // Deduct from tablet quantity
-      if (medicine.quantity < quantity) {
-        return res.status(400).json({ error: 'Not enough tablets in stock.' });
-      }
-      medicine.quantity -= quantity;
-    } else {
-      return res.status(400).json({ error: 'Invalid medicine type.' });
+    // Check stock availability
+    if (medicine.quantity < quantity) {
+      return res.status(400).json({
+        error: `Not enough ${type === 'Kashya' ? 'bottles' : 'tablets'} in stock.`,
+      });
     }
 
+    // Deduct from quantity
+    medicine.quantity -= quantity;
     await medicine.save();
 
-    res.json({
+    return res.json({
       message: 'Medicine stock deducted successfully.',
+      remainingQuantity: medicine.quantity,
       medicine,
     });
-  } catch (error) {
-    console.error('Error updating medicine:', error);
-    res.status(500).json({ error: 'Failed to deduct quantity.' });
+  } catch (err) {
+    console.error('Error updating medicine:', err);
+    res.status(500).json({ error: 'Failed to deduct medicine stock.' });
   }
 });
 

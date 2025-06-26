@@ -1,12 +1,15 @@
-// index.js
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import sequelize from "./config/db.js";
 import patientRoutes from "./routes/patients.js";
 import medicineRoutes from "./routes/medicines.js";
-import { Medicine } from "./models/Medicine.js"; // Make sure this exists
+import notesRoutes from "./routes/notes.js";
+import DoctorNote from "./models/DoctorNote.js";
+import PrescribedMedicine from "./models/PrescribedMedicine.js";
 
+DoctorNote.hasMany(PrescribedMedicine, { foreignKey: "noteId", onDelete: "CASCADE" });
+PrescribedMedicine.belongsTo(DoctorNote, { foreignKey: "noteId" });
 
 dotenv.config();
 
@@ -14,15 +17,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
 app.use("/api/patients", patientRoutes);
 app.use("/api/medicines", medicineRoutes);
+app.use("/api/notes", notesRoutes);
 
-// Start server after DB connection
 const PORT = process.env.PORT || 3001;
 
 sequelize
-  .sync({ force: true })
+  .sync({ alter: true })
   .then(() => {
     console.log("Database synced");
     app.listen(PORT, () => {
@@ -32,5 +34,3 @@ sequelize
   .catch((err) => {
     console.error("Failed to connect to DB:", err);
   });
- 
-  export default Medicine;
