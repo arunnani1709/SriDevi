@@ -30,17 +30,24 @@ router.post("/", async (req, res) => {
       prescription,
     });
 
-    const medicineRecords = medicines.map((med) => ({
-      ...med,
+     if (medicines.length > 0) {
+      const medicineRecords = medicines.map((med) => ({
+        ...med,
+        noteId: note.id,
+        clinicId,
+        visitDate,
+      }));
+
+      await PrescribedMedicine.bulkCreate(medicineRecords);
+    }
+
+    res.status(201).json({
+      message: "Doctor's note and medicines saved successfully.",
       noteId: note.id,
-    }));
-
-    await PrescribedMedicine.bulkCreate(medicineRecords);
-
-    res.json({ message: "Doctor's note saved successfully.", noteId: note.id });
+    });
   } catch (err) {
     console.error("Error saving note:", err);
-    res.status(500).json({ error: "Failed to save doctor note." });
+    res.status(500).json({ error: 'Failed to save doctor note.' });
   }
 });
 

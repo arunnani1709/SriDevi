@@ -110,6 +110,12 @@ const DoctorNotes = ({ clinicId }) => {
   const handleSave = async (id) => {
     const note = doctorNotes.find((n) => n.id === id);
 
+     const enrichedMedicines = note.medicines.map((med) => ({
+    ...med,
+    clinicId,
+    visitDate: note.visitDate,
+  }));
+
     try {
       await axios.post("/api/notes", {
         clinicId,
@@ -118,7 +124,7 @@ const DoctorNotes = ({ clinicId }) => {
         diagnosis: note.diagnosis,
         tests: note.tests,
         prescription: note.prescription,
-        medicines: note.medicines,
+        medicines: enrichedMedicines,
       });
 
       setDoctorNotes((prev) =>
