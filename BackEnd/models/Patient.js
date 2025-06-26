@@ -1,4 +1,3 @@
-// models/Patient.js
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 
@@ -7,6 +6,7 @@ const Patient = sequelize.define("Patient", {
     type: DataTypes.STRING,
     allowNull: false,
     unique: true,
+    primaryKey: true,
   },
   name: DataTypes.STRING,
   phone: DataTypes.STRING,

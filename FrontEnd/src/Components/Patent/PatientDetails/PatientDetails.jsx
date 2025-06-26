@@ -68,12 +68,11 @@ const PatientDetails = () => {
               >
                 Back
               </button>
-
             </div>
           </div>
 
           {/* 👇 Doctor Notes appears below Patient Info */}
-          <DoctorNotes patient={patient} />
+          <DoctorNotes clinicId={patient.clinicId} />
         </div>
       </div>
     </div>
