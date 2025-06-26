@@ -2,14 +2,13 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 
-const Medicine = sequelize.define("Medicine", {
+export const Medicine = sequelize.define("Medicine", {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
   },
   code: {
     type: DataTypes.STRING,
-    unique: true,
     allowNull: false,
   },
   quantity: {
@@ -17,13 +16,23 @@ const Medicine = sequelize.define("Medicine", {
     allowNull: false,
     defaultValue: 0,
   },
+  bottles: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
   type: {
     type: DataTypes.STRING,
-    allowNull: false, // Required field now
+    allowNull: false,
     validate: {
-      isIn: [["Tablet", "Kashya"]], // Optional: restrict values to known types
+      isIn: [["Tablet", "Kashya"]],
     },
   },
+}, {
+  indexes: [
+    {
+      unique: true,
+      fields: ['code', 'type'],
+    },
+  ],
 });
-
-export default Medicine;

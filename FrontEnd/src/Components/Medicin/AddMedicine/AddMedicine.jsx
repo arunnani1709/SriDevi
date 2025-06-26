@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Sidebar from '../../Sidebar/Sidebar';
 import Navbar from '../../Navbar/Navbar';
+import axios from 'axios';
 
 const AddMedicine = () => {
   const [medicine, setMedicine] = useState({
@@ -12,55 +13,41 @@ const AddMedicine = () => {
 
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
-  const [dummyMedicines, setDummyMedicines] = useState([]); // local "DB"
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setMedicine((prev) => ({ ...prev, [name]: value }));
-  };
+ const handleChange = (e) => {
+  const { name, value } = e.target;
+  const newValue = name === "code" ? value.toUpperCase() : value;
+  setMedicine((prev) => ({ ...prev, [name]: newValue }));
+};
 
-  const handleSubmit = (e) => {
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage(null);
     setError(null);
 
-    const name = medicine.name.trim();
-    const code = medicine.code.trim();
-    const quantity = medicine.quantity.trim();
-    const type = medicine.type.trim();
+    const { name, code, quantity, type } = medicine;
 
-    if (!name || !code || !quantity || !type) {
+    if (!name.trim() || !code.trim() || !quantity.trim() || !type.trim()) {
       setError('All fields are required');
       return;
     }
 
-    // Check if medicine with same name, code, and type exists
-    const index = dummyMedicines.findIndex(
-      (m) =>
-        m.name.toLowerCase() === name.toLowerCase() &&
-        m.code.toLowerCase() === code.toLowerCase() &&
-        m.type === type
-    );
-
-    if (index !== -1) {
-      // Update quantity
-      const updatedMedicines = [...dummyMedicines];
-      updatedMedicines[index].quantity += parseInt(quantity);
-      setDummyMedicines(updatedMedicines);
-      setMessage(`Quantity updated for "${name}"`);
-    } else {
-      // Add new
-      const newMedicine = {
-        name,
-        code,
+    try {
+      const res = await axios.post('/api/medicines', {
+        name: name.trim(),
+        code: code.trim(),
         quantity: parseInt(quantity),
-        type,
-      };
-      setDummyMedicines([...dummyMedicines, newMedicine]);
-      setMessage('Medicine saved successfully');
-    }
+        type: type.trim(),
+      });
 
-    setMedicine({ name: '', code: '', quantity: '', type: '' });
+      setMessage(res.data.message || 'Medicine saved successfully');
+      setMedicine({ name: '', code: '', quantity: '', type: '' });
+    } catch (err) {
+      console.error('Error saving medicine:', err);
+      const errorMsg = err?.response?.data?.error || 'Failed to save medicine. Please try again.';
+      setError(errorMsg);
+    }
   };
 
   return (
@@ -70,7 +57,7 @@ const AddMedicine = () => {
         <Sidebar />
         <div className="max-w-xl w-full mx-auto mt-10 bg-white p-6 rounded-lg shadow">
           <h2 className="text-2xl font-semibold text-green-800 mb-6">
-            Add / Update Medicine (Demo Mode)
+            Add / Update Medicine
           </h2>
 
           {message && (
@@ -132,33 +119,6 @@ const AddMedicine = () => {
               Save Medicine
             </button>
           </form>
-
-          {/* Show dummy table */}
-          {dummyMedicines.length > 0 && (
-            <div className="mt-10">
-              <h3 className="text-xl font-bold mb-2">Saved Medicines</h3>
-              <table className="w-full border text-sm">
-                <thead className="bg-green-100">
-                  <tr>
-                    <th className="border px-2 py-1">Name</th>
-                    <th className="border px-2 py-1">Code</th>
-                    <th className="border px-2 py-1">Quantity</th>
-                    <th className="border px-2 py-1">Type</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dummyMedicines.map((m, idx) => (
-                    <tr key={idx}>
-                      <td className="border px-2 py-1">{m.name}</td>
-                      <td className="border px-2 py-1">{m.code}</td>
-                      <td className="border px-2 py-1">{m.quantity}</td>
-                      <td className="border px-2 py-1">{m.type}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       </div>
     </div>

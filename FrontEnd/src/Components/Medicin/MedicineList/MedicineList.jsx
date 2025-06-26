@@ -1,60 +1,56 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import Navbar from '../../Navbar/Navbar';
 import Sidebar from '../../Sidebar/Sidebar';
-
+ 
 const MedicineList = () => {
   const [medicines, setMedicines] = useState([]);
   const [search, setSearch] = useState('');
   const [filteredMedicines, setFilteredMedicines] = useState([]);
   const [activeFilter, setActiveFilter] = useState('all'); // all | low | out
-
+ 
   useEffect(() => {
     const fetchMedicines = async () => {
-      const mockData = [
-        { name: 'Paracetamol', code: 'PCM500', quantity: 120, type: 'Tablet' },
-        { name: 'Ashwagandha', code: 'ASH100', quantity: 80, type: 'Kashya' },
-        { name: 'Ibuprofen', code: 'IBU200', quantity: 0, type: 'Tablet' },
-        { name: 'Amrutarishta', code: 'AMR001', quantity: 15, type: 'Kashya' },
-        { name: 'Dolo', code: 'DOL650', quantity: 600, type: 'Tablet' },
-        { name: 'Triphala', code: 'TRI123', quantity: 0, type: 'Kashya' },
-      ];
-
-      await new Promise((res) => setTimeout(res, 200));
-      setMedicines(mockData);
-      setFilteredMedicines(mockData);
+      try {
+        const res = await axios.get('/api/medicines');
+        setMedicines(res.data);
+        setFilteredMedicines(res.data);
+      } catch (error) {
+        console.error('Error fetching medicines:', error);
+      }
     };
-
+ 
     fetchMedicines();
   }, []);
-
+ 
   useEffect(() => {
     const lowerSearch = search.toLowerCase();
-
+ 
     const filtered = medicines
       .filter((med) => {
         const matchesSearch =
           med.name.toLowerCase().startsWith(lowerSearch) ||
           med.code.toLowerCase().startsWith(lowerSearch);
-
+ 
         const isLow =
-          (med.type === 'Tablet' && med.quantity < 500 && med.quantity > 0) ||
-          (med.type === 'Kashya' && med.quantity < 20 && med.quantity > 0);
-
+          (med.type === 'Tablet' && med.quantity < 100 && med.quantity > 0) ||
+          (med.type === 'Kashya' && med.quantity < 5 && med.quantity > 0);
+ 
         const isOut = med.quantity === 0;
-
+ 
         if (activeFilter === 'low') return matchesSearch && isLow;
         if (activeFilter === 'out') return matchesSearch && isOut;
         return matchesSearch;
       })
-      .sort((a, b) => a.name.localeCompare(b.name)); // Alphabetical
-
+      .sort((a, b) => a.name.localeCompare(b.name));
+ 
     setFilteredMedicines(filtered);
   }, [search, medicines, activeFilter]);
-
+ 
   const handleFilterChange = (filter) => {
     setActiveFilter(filter);
   };
-
+ 
   const getHeading = () => {
     switch (activeFilter) {
       case 'low':
@@ -65,19 +61,18 @@ const MedicineList = () => {
         return 'All Medicines';
     }
   };
-
-  // Determine row background color based on quantity and type
+ 
   const getRowClass = (med) => {
     if (med.quantity === 0) return 'bg-red-100';
     if (
-      (med.type === 'Tablet' && med.quantity < 500) ||
-      (med.type === 'Kashya' && med.quantity < 20)
+      (med.type === 'Tablet' && med.quantity < 100) ||
+      (med.type === 'Kashya' && med.quantity < 5)
     ) {
       return 'bg-yellow-100';
     }
     return 'hover:bg-green-50';
   };
-
+ 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -85,7 +80,7 @@ const MedicineList = () => {
         <Sidebar />
         <div className="flex-1 px-10 py-10">
           <h2 className="text-3xl font-bold text-green-800 mb-4 text-center">{getHeading()}</h2>
-
+ 
           {/* Search Input */}
           <div className="mb-4 max-w-md mx-auto">
             <input
@@ -96,7 +91,7 @@ const MedicineList = () => {
               className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
-
+ 
           {/* Filter Buttons */}
           <div className="flex justify-center gap-4 mb-6">
             <button
@@ -130,7 +125,7 @@ const MedicineList = () => {
               Out of Stock
             </button>
           </div>
-
+ 
           {/* Table */}
           <div className="bg-white rounded-lg shadow overflow-hidden border">
             <table className="w-full text-sm text-left">
@@ -146,7 +141,7 @@ const MedicineList = () => {
               <tbody>
                 {filteredMedicines.length > 0 ? (
                   filteredMedicines.map((med, index) => (
-                    <tr key={med.code} className={`border-b ${getRowClass(med)}`}>
+                    <tr key={med.id || med.code} className={`border-b ${getRowClass(med)}`}>
                       <td className="px-6 py-3">{index + 1}</td>
                       <td className="px-6 py-3">{med.name}</td>
                       <td className="px-6 py-3">{med.code}</td>
@@ -169,5 +164,5 @@ const MedicineList = () => {
     </div>
   );
 };
-
+ 
 export default MedicineList;
