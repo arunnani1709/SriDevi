@@ -1,10 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import AddInduviualPatientMedicine from "../AddInduviualPatientMedicine/AddInduviualPatientMedicine";
+
+const getBackendType = (unit) => (unit === "ml" ? "Kashya" : "Tablet");
+const getFrontendUnit = (type) => (type === "Kashya" ? "ml" : "No");
 
 const DoctorNotes = () => {
   const [doctorNotes, setDoctorNotes] = useState([]);
   const [openNoteId, setOpenNoteId] = useState(null);
   const [noteDate, setNoteDate] = useState("");
+
   const [shortForm, setShortForm] = useState("");
   const [dose1, setDose1] = useState("");
   const [dose2, setDose2] = useState("");
@@ -13,25 +18,25 @@ const DoctorNotes = () => {
   const [days, setDays] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
   const [bottleCount, setBottleCount] = useState("");
-  const [unit, setUnit] = useState("No"); // 'No' for tablets, 'ml' for Kashaya
+  const [unit, setUnit] = useState("No");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [medicines, setMedicines] = useState([]);
+  const [fullForm, setFullForm] = useState("");
 
-  
-  const medicineMap = {
-    PCM: "Paracetamol",
-    PBM: "Paraceta",
-    CRM: "Paral",
-    AZ: "Azithromycin",
-    DLO: "Dolopar",
-    CPM: "Cetirizine",
-    RNT: "Rantac",
-    AMX: "Amoxicillin",
-    IBP: "Ibuprofen",
+  useEffect(() => {
+    fetchMedicines();
+  }, []);
+
+  const fetchMedicines = () => {
+    axios
+      .get("/api/medicines")
+      .then((res) => setMedicines(res.data))
+      .catch((err) => console.error("Error fetching medicines:", err));
   };
 
-  const filteredMedicines = Object.keys(medicineMap).filter(
-    (key) => key.toLowerCase().startsWith(shortForm.toLowerCase()) && shortForm !== ""
-  );
+  const filteredMedicines = medicines
+    .filter((med) => med.code.toLowerCase().startsWith(shortForm.toLowerCase()))
+    .map((med) => `${med.code} - ${med.name}`);
 
   const handleAddNote = () => {
     if (!noteDate) return alert("Please enter a date before adding a note.");
@@ -40,7 +45,7 @@ const DoctorNotes = () => {
 
     let daysDifference = null;
     if (lastVisit) {
-      const diffTime = newVisitDate.getTime() - lastVisit.getTime();
+      const diffTime = newVisitDate - lastVisit;
       daysDifference = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
@@ -77,38 +82,89 @@ const DoctorNotes = () => {
     setOpenNoteId((prev) => (prev === id ? null : id));
   };
 
-  const handleMedicineAdd = (id, name, d1, d2, d3, time, days, totalAmount, unit, bottleCount) => {
-    setDoctorNotes((prev) =>
-      prev.map((note) =>
-        note.id === id
-          ? {
-              ...note,
-              medicines: [
-                ...note.medicines,
-                { name, dose1: d1, dose2: d2, dose3: d3, time, days, totalAmount, unit, bottleCount },
-              ],
-            }
-          : note
-      )
+  const handleMedicineAdd = async (
+    noteId,
+    code,
+    d1,
+    d2,
+    d3,
+    time,
+    days,
+    totalAmount,
+    unit,
+    bottleCount
+  ) => {
+    const backendType = getBackendType(unit);
+    const actualCode = code.split(" - ")[0];
+    const med = medicines.find(
+      (m) => m.code === actualCode && m.type === backendType
     );
+
+    if (!med)
+      return alert(`Selected medicine (${actualCode} - ${backendType}) not found.`);
+
+    const deductQty = unit === "ml" ? bottleCount : totalAmount;
+
+    try {
+      await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, {
+        quantity: Number(deductQty),
+      });
+
+      await fetchMedicines();
+
+      setDoctorNotes((prev) =>
+        prev.map((note) =>
+          note.id === noteId
+            ? {
+                ...note,
+                medicines: [
+                  ...note.medicines,
+                  {
+                    code: med.code,
+                    name: med.name,
+                    dose1: d1,
+                    dose2: d2,
+                    dose3: d3,
+                    time,
+                    days,
+                    totalAmount,
+                    unit,
+                    bottleCount,
+                  },
+                ],
+              }
+            : note
+        )
+      );
+    } catch (err) {
+      console.error("Error deducting medicine:", err);
+      alert(
+        err?.response?.data?.error ||
+          "Failed to deduct medicine from inventory."
+      );
+    }
   };
 
   const handleSuggestionClick = (code) => {
-    setShortForm(medicineMap[code]);
+    const matched = medicines.find((m) => `${m.code} - ${m.name}` === code);
+    if (matched) {
+      setShortForm(code);
+      setUnit(getFrontendUnit(matched.type));
+      setFullForm(matched.name);
+    } else {
+      setShortForm(code);
+    }
     setShowSuggestions(false);
   };
-
-  const getShortCodeFromFullName = (fullName) =>
-    Object.keys(medicineMap).find((key) => medicineMap[key] === fullName);
 
   const updateDays = (value) => {
     setDays(value);
     const total =
-      (Number(dose1 || 0) + Number(dose2 || 0) + Number(dose3 || 0)) * Number(value || 0);
+      (Number(dose1 || 0) + Number(dose2 || 0) + Number(dose3 || 0)) *
+      Number(value || 0);
     setTotalAmount(total > 0 ? total : "");
     if (unit === "ml") {
-      const bottles = Math.ceil(total / 210);
-      setBottleCount(bottles > 0 ? bottles : "");
+      setBottleCount(Math.ceil(total / 210));
     } else {
       setBottleCount("");
     }
@@ -134,7 +190,9 @@ const DoctorNotes = () => {
       {doctorNotes.map((note) => (
         <div key={note.id} className="mb-6 border rounded-lg shadow bg-white">
           <div className="p-2 border-b flex items-center justify-between">
-            <p className="font-semibold text-green-700">Doctor's Note - {note.visitDate}</p>
+            <p className="font-semibold text-green-700">
+              Doctor's Note - {note.visitDate}
+            </p>
             <button
               onClick={() => toggleDropdown(note.id)}
               className="text-green-700 text-xl font-bold hover:bg-green-100 w-8 h-8 rounded-full"
@@ -145,17 +203,23 @@ const DoctorNotes = () => {
 
           {openNoteId === note.id && (
             <div className="p-4 space-y-4">
-              {['complaint', 'diagnosis', 'tests', 'prescription'].map((field) => (
-                <div key={field}>
-                  <label className="block text-sm font-semibold mb-1 capitalize">{field}</label>
-                  <textarea
-                    value={note[field]}
-                    onChange={(e) => handleChange(note.id, field, e.target.value)}
-                    className="w-full border rounded-md p-2 min-h-[100px]"
-                    disabled={note.saved}
-                  />
-                </div>
-              ))}
+              {["complaint", "diagnosis", "tests", "prescription"].map(
+                (field) => (
+                  <div key={field}>
+                    <label className="block text-sm font-semibold mb-1 capitalize">
+                      {field}
+                    </label>
+                    <textarea
+                      value={note[field]}
+                      onChange={(e) =>
+                        handleChange(note.id, field, e.target.value)
+                      }
+                      className="w-full border rounded-md p-2 min-h-[100px]"
+                      disabled={note.saved}
+                    />
+                  </div>
+                )
+              )}
 
               {!note.saved && (
                 <AddInduviualPatientMedicine
@@ -164,7 +228,9 @@ const DoctorNotes = () => {
                   showSuggestions={showSuggestions}
                   setShowSuggestions={setShowSuggestions}
                   filteredMedicines={filteredMedicines}
-                  medicineMap={medicineMap}
+                  medicineMap={Object.fromEntries(
+                    medicines.map((m) => [m.code, m.name])
+                  )}
                   handleSuggestionClick={handleSuggestionClick}
                   unit={unit}
                   setUnit={setUnit}
@@ -181,14 +247,11 @@ const DoctorNotes = () => {
                   doseTime={doseTime}
                   setDoseTime={setDoseTime}
                   handleAddMedicine={() => {
-                    const finalShort = getShortCodeFromFullName(shortForm) || shortForm;
-                    const finalFull = medicineMap[finalShort];
-                    if (!finalFull) return alert("Medicine not found.");
                     if (!days || !totalAmount)
                       return alert("Please enter valid doses and days.");
                     handleMedicineAdd(
                       note.id,
-                      finalFull,
+                      shortForm.toUpperCase(),
                       dose1,
                       dose2,
                       dose3,
@@ -207,8 +270,15 @@ const DoctorNotes = () => {
                     setUnit("No");
                     setDoseTime("B/F");
                     setBottleCount("");
+                    setFullForm("");
                   }}
                 />
+              )}
+
+              {fullForm && (
+                <p className="text-sm text-gray-700 mt-1 ml-1">
+                  <span className="font-semibold">Full Name:</span> {fullForm}
+                </p>
               )}
 
               {note.medicines.length > 0 && (
@@ -220,40 +290,23 @@ const DoctorNotes = () => {
                       className="flex items-center gap-6 bg-white p-3 rounded shadow-sm text-base border"
                     >
                       <span className="w-1/5 font-medium">{med.name}</span>
-                      <span className="w-16 text-center">
-                        <div className="text-[10px] text-gray-500">Morning</div>
-                        <div>{med.dose1}</div>
-                      </span>
-                      <span className="w-16 text-center">
-                        <div className="text-[10px] text-gray-500">Afternoon</div>
-                        <div>{med.dose2}</div>
-                      </span>
-                      <span className="w-16 text-center">
-                        <div className="text-[10px] text-gray-500">Evening</div>
-                        <div>{med.dose3}</div>
-                      </span>
+                      <span className="w-16 text-center">{med.dose1}</span>
+                      <span className="w-16 text-center">{med.dose2}</span>
+                      <span className="w-16 text-center">{med.dose3}</span>
                       <span className="w-28 text-center">
-                      {{
-                      "B/F": "Before Food",
-                       "A/F": "After Food",
-                       "I/B/F": "In Between Food"
-                          }[med.time]}
-                       </span>
-
-                      <span className="w-20 text-center">
-                        <div className="text-[10px] text-gray-500">Days</div>
-                        <div>{med.days}</div>
+                        {{
+                          "B/F": "Before Food",
+                          "A/F": "After Food",
+                          "I/B/F": "In Between Food",
+                        }[med.time] || med.time}
                       </span>
+                      <span className="w-20 text-center">{med.days}</span>
                       <span className="w-28 text-center">
-                        <div className="text-[10px] text-gray-500">Total</div>
-                        <div className="font-semibold">
-                          {med.totalAmount} {med.unit}
-                        </div>
+                        {med.totalAmount} {med.unit}
                       </span>
                       {med.unit === "ml" && (
                         <span className="w-28 text-center">
-                          <div className="text-[10px] text-gray-500">Bottles</div>
-                          <div className="font-semibold">{med.bottleCount}</div>
+                          {med.bottleCount} bottle
                         </span>
                       )}
                     </div>
@@ -271,11 +324,15 @@ const DoctorNotes = () => {
                   </button>
                 ) : (
                   <>
-                    <p className="text-sm text-green-600 font-medium">Saved ✅</p>
+                    <p className="text-sm text-green-600 font-medium">
+                      Saved ✅
+                    </p>
                     <button
                       onClick={() =>
                         setDoctorNotes((prev) =>
-                          prev.map((n) => (n.id === note.id ? { ...n, saved: false } : n))
+                          prev.map((n) =>
+                            n.id === note.id ? { ...n, saved: false } : n
+                          )
                         )
                       }
                       className="px-4 py-2 bg-yellow-500 text-white rounded-full text-sm hover:bg-yellow-600"

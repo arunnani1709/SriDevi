@@ -60,7 +60,6 @@ const AddInduviualPatientMedicine = ({
           value={unit}
           onChange={(e) => {
             setUnit(e.target.value);
-            updateDays(days);
           }}
           className="border rounded p-2"
         >
@@ -93,12 +92,17 @@ const AddInduviualPatientMedicine = ({
           className="border rounded p-2 w-[70px]"
         />
 
-        <input
-          type="text"
-          value={`${totalAmount} ${unit}`}
-          readOnly
-          className="border rounded p-2 w-[100px] bg-gray-100"
-        />
+        <div className="flex items-center gap-2">
+  <input
+    type="text"
+    value={`${totalAmount}`}
+    readOnly
+    className="border rounded p-2 w-[100px] bg-gray-100"
+  />
+  <span className="text-sm text-gray-600">
+    {unit === "ml" ? "ml" : "Tab"}
+  </span>
+</div>
 
         {unit === "ml" && (
           <input
