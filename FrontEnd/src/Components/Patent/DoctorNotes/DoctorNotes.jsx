@@ -27,6 +27,38 @@ const DoctorNotes = ({ clinicId }) => {
     fetchMedicines();
   }, []);
 
+  useEffect(() => {
+    const fetchNotesByClinic = async () => {
+      try {
+        const res = await axios.get(`/api/notes/clinic/${clinicId}`);
+        const sorted = res.data.sort(
+          (a, b) => new Date(b.visitDate) - new Date(a.visitDate)
+        );
+        const enriched = sorted.map((note, idx, arr) => {
+          let daysSinceLastVisit = null;
+          if (idx < arr.length - 1) {
+            const prev = new Date(arr[idx + 1].visitDate);
+            const curr = new Date(note.visitDate);
+            daysSinceLastVisit = Math.ceil((curr - prev) / (1000 * 60 * 60 * 24));
+          }
+          return {
+            ...note,
+            id: note.id,
+            saved: true,
+            medicines: note.medicines || [],
+            daysSinceLastVisit,
+          };
+        });
+        setDoctorNotes(enriched);
+      } catch (err) {
+        console.error("Error fetching notes by clinic:", err);
+      }
+    };
+  
+    if (clinicId) fetchNotesByClinic();
+  }, [clinicId]);
+  
+
   const fetchMedicines = () => {
     axios
       .get("/api/medicines")

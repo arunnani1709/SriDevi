@@ -2,23 +2,18 @@ import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 
 const DoctorNote = sequelize.define("DoctorNote", {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
   clinicId: {
-    type: DataTypes.STRING, // ⬅️ fix to STRING to match Patient.clinicId
+    type: DataTypes.STRING,
     allowNull: false,
   },
   visitDate: {
     type: DataTypes.DATEONLY,
     allowNull: false,
   },
-  complaint: DataTypes.TEXT,
-  diagnosis: DataTypes.TEXT,
-  tests: DataTypes.TEXT,
-  prescription: DataTypes.TEXT,
+  complaint: DataTypes.STRING,
+  diagnosis: DataTypes.STRING,
+  tests: DataTypes.STRING,
+  prescription: DataTypes.STRING,
 });
 
 export default DoctorNote;
