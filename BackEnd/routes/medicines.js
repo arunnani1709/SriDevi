@@ -62,13 +62,7 @@ router.post('/', async (req, res) => {
 // ✅ Deduct medicine quantity by code + type
 router.put('/:code/:type/deduct', async (req, res) => {
   const { code, type } = req.params;
-  let { quantity } = req.body;
-
-  quantity = parseInt(quantity); // ✅ Ensure it's treated as a number
-
-  if (isNaN(quantity) || quantity <= 0) {
-    return res.status(400).json({ error: 'Valid quantity is required.' });
-  }
+  let { quantity, bottleCount } = req.body;
 
   try {
     const medicine = await Medicine.findOne({
@@ -79,15 +73,35 @@ router.put('/:code/:type/deduct', async (req, res) => {
       return res.status(404).json({ error: 'Medicine not found.' });
     }
 
-    // Check stock availability
-    if (medicine.quantity < quantity) {
+    // Convert bottleCount to ml if applicable
+    let deductionQuantity;
+
+    if (type === 'Kashya') {
+      const bottles = parseInt(bottleCount);
+      if (isNaN(bottles) || bottles <= 0) {
+        return res.status(400).json({ error: 'Valid bottle count is required for Kashya.' });
+      }
+      deductionQuantity = bottles * 210;
+    } else if (type === 'Grutha') {
+      const bottles = parseInt(bottleCount);
+      if (isNaN(bottles) || bottles <= 0) {
+        return res.status(400).json({ error: 'Valid bottle count is required for Grutha.' });
+      }
+      deductionQuantity = bottles * 150;
+    } else {
+      deductionQuantity = parseInt(quantity);
+      if (isNaN(deductionQuantity) || deductionQuantity <= 0) {
+        return res.status(400).json({ error: 'Valid quantity is required.' });
+      }
+    }
+
+    if (medicine.quantity < deductionQuantity) {
       return res.status(400).json({
-        error: `Not enough ${type === 'Kashya' ? 'bottles' : 'tablets'} in stock.`,
+        error: `Not enough stock. Available: ${medicine.quantity}, Required: ${deductionQuantity}`,
       });
     }
 
-    // Deduct from quantity
-    medicine.quantity -= quantity;
+    medicine.quantity -= deductionQuantity;
     await medicine.save();
 
     return res.json({
@@ -100,6 +114,7 @@ router.put('/:code/:type/deduct', async (req, res) => {
     res.status(500).json({ error: 'Failed to deduct medicine stock.' });
   }
 });
+
 
 // ✅ Get all medicines
 router.get('/', async (req, res) => {
