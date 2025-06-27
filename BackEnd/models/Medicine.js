@@ -25,7 +25,20 @@ export const Medicine = sequelize.define("Medicine", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      isIn: [["Tablet", "Kashya"]],
+      isIn: [[
+        "Tablet",
+        "Kashya",
+        "Grutha",
+        "Thila",
+        "Leha",
+        "Linements",
+        "Capsule",
+        "Powder",
+        "Naseldrop",
+        "Soap",
+        "Paste",
+        "Shampu"
+      ]],
     },
   },
 }, {

@@ -22,6 +22,8 @@ const DoctorNotes = ({ clinicId }) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [medicines, setMedicines] = useState([]);
   const [fullForm, setFullForm] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+
 
   useEffect(() => {
     fetchMedicines();
@@ -152,68 +154,77 @@ const handleSave = async (id) => {
     setOpenNoteId((prev) => (prev === id ? null : id));
   };
 
-  const handleMedicineAdd = async (
-    noteId,
-    code,
-    d1,
-    d2,
-    d3,
-    time,
-    days,
-    totalAmount,
-    unit,
-    bottleCount
-  ) => {
-    const backendType = getBackendType(unit);
-    const actualCode = code.split(" - ")[0];
-    const med = medicines.find(
-      (m) => m.code === actualCode && m.type === backendType
-    );
+const handleMedicineAdd = async (
+  noteId,
+  code,
+  d1,
+  d2,
+  d3,
+  time,
+  days,
+  totalAmount,
+  unit,
+  bottleCount
+) => {
+  const backendType = getBackendType(unit); // "Kashya" if unit === "ml", else "Tablet"
+  const actualCode = code.split(" - ")[0]; // Extract only code
+  const med = medicines.find(
+    (m) => m.code === actualCode && m.type === backendType
+  );
 
-    if (!med)
-      return alert(`Selected medicine (${actualCode} - ${backendType}) not found.`);
+  if (!med) {
+    return alert(`Selected medicine (${actualCode} - ${backendType}) not found.`);
+  }
 
-    const deductQty = unit === "ml" ? Math.ceil((Number(dose1) + Number(dose2) + Number(dose3)) * days / 210) : totalAmount;
-
-    try {
+  try {
+    // ✅ Deduct from backend
+    if (unit === "ml") {
       await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, {
-        quantity: Number(deductQty),
+        quantity: Number(bottleCount), // send bottle count as quantity
       });
-
-      await fetchMedicines();
-
-      setDoctorNotes((prev) =>
-        prev.map((note) =>
-          note.id === noteId
-            ? {
-                ...note,
-                medicines: [
-                  ...note.medicines,
-                  {
-                    code: med.code,
-                    name: med.name,
-                    dose1: d1,
-                    dose2: d2,
-                    dose3: d3,
-                    time,
-                    days,
-                    totalAmount,
-                    unit,
-                    bottleCount,
-                  },
-                ],
-              }
-            : note
-        )
-      );
-    } catch (err) {
-      console.error("Error deducting medicine:", err);
-      alert(
-        err?.response?.data?.error ||
-          "Failed to deduct medicine from inventory."
-      );
+    } else {
+      await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, {
+        quantity: Number(totalAmount), // send total tablets/capsules/spoons
+      });
     }
-  };
+
+    // ✅ Refresh medicine list
+    await fetchMedicines();
+
+    // ✅ Update local note state with new medicine entry
+    setDoctorNotes((prev) =>
+      prev.map((note) =>
+        note.id === noteId
+          ? {
+              ...note,
+              medicines: [
+                ...note.medicines,
+                {
+                  code: med.code,
+                  name: med.name,
+                  dose1: d1,
+                  dose2: d2,
+                  dose3: d3,
+                  time,
+                  days,
+                  totalAmount,
+                  unit,
+                  bottleCount,
+                },
+              ],
+            }
+          : note
+      )
+    );
+  } catch (err) {
+    console.error("Error deducting medicine:", err);
+    alert(
+      err?.response?.data?.error ||
+      "Failed to deduct medicine from inventory."
+    );
+  }
+};
+
 
   const handleSuggestionClick = (code) => {
     const matched = medicines.find((m) => `${m.code} - ${m.name}` === code);
@@ -299,56 +310,62 @@ const handleSave = async (id) => {
 
               {!note.saved && (
                 <AddInduviualPatientMedicine
-                  shortForm={shortForm}
-                  setShortForm={setShortForm}
-                  showSuggestions={showSuggestions}
-                  setShowSuggestions={setShowSuggestions}
-                  filteredMedicines={filteredMedicines}
-                  medicineMap={Object.fromEntries(
-                    medicines.map((m) => [m.code, m.name])
-                  )}
-                  handleSuggestionClick={handleSuggestionClick}
-                  unit={unit}
-                  setUnit={setUnit}
-                  dose1={dose1}
-                  setDose1={setDose1}
-                  dose2={dose2}
-                  setDose2={setDose2}
-                  dose3={dose3}
-                  setDose3={setDose3}
-                  days={days}
-                  updateDays={updateDays}
-                  totalAmount={totalAmount}
-                  bottleCount={bottleCount}
-                  doseTime={doseTime}
-                  setDoseTime={setDoseTime}
-                  handleAddMedicine={() => {
-                    if (!days || !totalAmount)
-                      return alert("Please enter valid doses and days.");
-                    handleMedicineAdd(
-                      note.id,
-                      shortForm.toUpperCase(),
-                      dose1,
-                      dose2,
-                      dose3,
-                      doseTime,
-                      days,
-                      totalAmount,
-                      unit,
-                      bottleCount
-                    );
-                    setShortForm("");
-                    setDose1("");
-                    setDose2("");
-                    setDose3("");
-                    setDays("");
-                    setTotalAmount("");
-                    setUnit("No");
-                    setDoseTime("B/F");
-                    setBottleCount("");
-                    setFullForm("");
-                  }}
-                />
+  shortForm={shortForm}
+  setShortForm={setShortForm}
+  showSuggestions={showSuggestions}
+  setShowSuggestions={setShowSuggestions}
+  filteredMedicines={filteredMedicines}
+  medicineMap={Object.fromEntries(
+    medicines.map((m) => [m.code, m.name])
+  )}
+  handleSuggestionClick={handleSuggestionClick}
+  unit={unit}
+  setUnit={setUnit}
+  dose1={dose1}
+  setDose1={setDose1}
+  dose2={dose2}
+  setDose2={setDose2}
+  dose3={dose3}
+  setDose3={setDose3}
+  days={days}
+  updateDays={updateDays}
+  totalAmount={totalAmount}
+  setTotalAmount={setTotalAmount}
+  bottleCount={bottleCount}
+  doseTime={doseTime}
+  setDoseTime={setDoseTime}
+  selectedType={selectedType}
+  setSelectedType={setSelectedType}
+  handleAddMedicine={() => {
+    if (!days || !totalAmount)
+      return alert("Please enter valid doses and days.");
+    handleMedicineAdd(
+      note.id,
+      shortForm.toUpperCase(),
+      dose1,
+      dose2,
+      dose3,
+      doseTime,
+      days,
+      totalAmount,
+      unit,
+      bottleCount
+    );
+    // Reset all fields after add
+    setShortForm("");
+    setDose1("");
+    setDose2("");
+    setDose3("");
+    setDays("");
+    setTotalAmount("");
+    setUnit("No");
+    setDoseTime("B/F");
+    setBottleCount("");
+    setFullForm("");
+    setSelectedType("");
+  }}
+/>
+
               )}
 
               {fullForm && (

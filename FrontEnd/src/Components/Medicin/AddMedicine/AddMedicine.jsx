@@ -14,12 +14,11 @@ const AddMedicine = () => {
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
- const handleChange = (e) => {
-  const { name, value } = e.target;
-  const newValue = name === "code" ? value.toUpperCase() : value;
-  setMedicine((prev) => ({ ...prev, [name]: newValue }));
-};
-
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    const newValue = name === "code" ? value.toUpperCase() : value;
+    setMedicine((prev) => ({ ...prev, [name]: newValue }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,6 +42,10 @@ const AddMedicine = () => {
 
       setMessage(res.data.message || 'Medicine saved successfully');
       setMedicine({ name: '', code: '', quantity: '', type: '' });
+      setTimeout(() => {
+        setMessage(null);
+      }, 1000);
+
     } catch (err) {
       console.error('Error saving medicine:', err);
       const errorMsg = err?.response?.data?.error || 'Failed to save medicine. Please try again.';
@@ -81,6 +84,7 @@ const AddMedicine = () => {
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
             />
+
             <input
               type="text"
               name="code"
@@ -90,16 +94,7 @@ const AddMedicine = () => {
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
             />
-            <input
-              type="number"
-              name="quantity"
-              placeholder="Quantity to Add"
-              required
-              min="1"
-              value={medicine.quantity}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
+
             <select
               name="type"
               required
@@ -110,7 +105,37 @@ const AddMedicine = () => {
               <option value="">Select Medicine Type</option>
               <option value="Tablet">Tablet</option>
               <option value="Kashya">Kashya</option>
+              <option value="Grutha">Grutha(Thuppa)</option>
+              <option value="Thila">Thila(OIL)</option>
+              <option value="Leha">Leha</option>
+              <option value="Linements">Linements(Ayntment)</option>
+              <option value="Powder">Powder</option>
+              <option value="Naseldrop">NaselDrop</option>
+              <option value="Capsule">Capsule</option>
+              <option value="Soap">Soap</option>
+              <option value="Paste">Paste</option>
+              <option value="Shampu">Shampu</option>
             </select>
+
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">
+                Quantity {medicine.type === "Powder" && "(in grams)"}
+              </label>
+              <input
+                type="number"
+                name="quantity"
+                placeholder={
+                  medicine.type === "Powder"
+                    ? "Enter quantity in grams"
+                    : "Quantity to Add"
+                }
+                required
+                min="1"
+                value={medicine.quantity}
+                onChange={handleChange}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
 
             <button
               type="submit"
