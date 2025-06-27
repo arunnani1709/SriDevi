@@ -1,10 +1,10 @@
-// routes/notes.js
 import express from "express";
 import DoctorNote from "../models/DoctorNote.js";
 import PrescribedMedicine from "../models/PrescribedMedicine.js";
 
 const router = express.Router();
 
+// POST: Create a new doctor note with medicines
 router.post("/", async (req, res) => {
   const {
     clinicId,
@@ -30,7 +30,7 @@ router.post("/", async (req, res) => {
       prescription,
     });
 
-     if (medicines.length > 0) {
+    if (medicines.length > 0) {
       const medicineRecords = medicines.map((med) => ({
         ...med,
         noteId: note.id,
@@ -47,10 +47,11 @@ router.post("/", async (req, res) => {
     });
   } catch (err) {
     console.error("Error saving note:", err);
-    res.status(500).json({ error: 'Failed to save doctor note.' });
+    res.status(500).json({ error: "Failed to save doctor note." });
   }
 });
 
+// GET: Fetch all notes by clinicId via query
 router.get("/", async (req, res) => {
   const { clinicId } = req.query;
 
@@ -77,13 +78,19 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET: Fetch all notes by clinicId via route param
 router.get("/clinic/:clinicId", async (req, res) => {
   const { clinicId } = req.params;
 
   try {
     const notes = await DoctorNote.findAll({
       where: { clinicId },
-      include: [PrescribedMedicine], // ensure medicines come along
+      include: [
+  {
+    model: PrescribedMedicine,
+    as: "medicines", // ✅ must match alias used in association
+  },
+], // include medicines
       order: [["visitDate", "DESC"]],
     });
 
@@ -93,4 +100,32 @@ router.get("/clinic/:clinicId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch notes" });
   }
 });
+
+// ✅ NEW: POST /api/notes/prescriptions → Insert medicines using clinicId & visitDate
+router.post("/prescriptions", async (req, res) => {
+  const { clinicId, visitDate, medicines } = req.body;
+
+  try {
+    const note = await DoctorNote.findOne({
+      where: { clinicId, visitDate },
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: "Doctor note not found." });
+    }
+
+    const medicineData = medicines.map((med) => ({
+      ...med,
+      noteId: note.id,
+    }));
+
+    await PrescribedMedicine.bulkCreate(medicineData);
+
+    res.status(201).json({ message: "Prescribed medicines added successfully." });
+  } catch (error) {
+    console.error("Error saving medicines:", error);
+    res.status(500).json({ error: "Failed to save prescribed medicines." });
+  }
+});
+
 export default router;
