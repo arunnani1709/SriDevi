@@ -86,11 +86,11 @@ router.get("/clinic/:clinicId", async (req, res) => {
     const notes = await DoctorNote.findAll({
       where: { clinicId },
       include: [
-  {
-    model: PrescribedMedicine,
-    as: "medicines", // ✅ must match alias used in association
-  },
-], // include medicines
+        {
+          model: PrescribedMedicine,
+          as: "medicines", // ✅ must match alias used in association
+        },
+      ], // include medicines
       order: [["visitDate", "DESC"]],
     });
 
@@ -114,6 +114,12 @@ router.post("/prescriptions", async (req, res) => {
       return res.status(404).json({ error: "Doctor note not found." });
     }
 
+    // ✅ Delete existing medicines for this note
+    await PrescribedMedicine.destroy({
+      where: { noteId: note.id },
+    });
+
+    // ✅ Insert new ones
     const medicineData = medicines.map((med) => ({
       ...med,
       noteId: note.id,
@@ -121,11 +127,25 @@ router.post("/prescriptions", async (req, res) => {
 
     await PrescribedMedicine.bulkCreate(medicineData);
 
-    res.status(201).json({ message: "Prescribed medicines added successfully." });
+    res
+      .status(201)
+      .json({ message: "Prescribed medicines replaced successfully." });
   } catch (error) {
     console.error("Error saving medicines:", error);
     res.status(500).json({ error: "Failed to save prescribed medicines." });
   }
+});
+
+router.put("/:id", async (req, res) => {
+  const noteId = req.params.id;
+  const updateData = req.body;
+
+  const note = await DoctorNote.findByPk(noteId);
+  if (!note) return res.status(404).json({ error: "Note not found" });
+
+  await note.update(updateData);
+
+  res.json(note);
 });
 
 export default router;

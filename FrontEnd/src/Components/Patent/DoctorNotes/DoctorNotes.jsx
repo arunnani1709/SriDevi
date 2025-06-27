@@ -24,7 +24,6 @@ const DoctorNotes = ({ clinicId }) => {
   const [fullForm, setFullForm] = useState("");
   const [selectedType, setSelectedType] = useState("");
 
-
   useEffect(() => {
     fetchMedicines();
   }, []);
@@ -41,11 +40,14 @@ const DoctorNotes = ({ clinicId }) => {
           if (idx < arr.length - 1) {
             const prev = new Date(arr[idx + 1].visitDate);
             const curr = new Date(note.visitDate);
-            daysSinceLastVisit = Math.ceil((curr - prev) / (1000 * 60 * 60 * 24));
+            daysSinceLastVisit = Math.ceil(
+              (curr - prev) / (1000 * 60 * 60 * 24)
+            );
           }
           return {
             ...note,
-            id: note.id,
+            id: note.id,       // local id for React
+            dbId: note.id,     // DB primary key
             saved: true,
             medicines: note.medicines || [],
             daysSinceLastVisit,
@@ -56,10 +58,9 @@ const DoctorNotes = ({ clinicId }) => {
         console.error("Error fetching notes by clinic:", err);
       }
     };
-  
+
     if (clinicId) fetchNotesByClinic();
   }, [clinicId]);
-  
 
   const fetchMedicines = () => {
     axios
@@ -69,7 +70,9 @@ const DoctorNotes = ({ clinicId }) => {
   };
 
   const filteredMedicines = medicines
-    .filter((med) => med.code.toLowerCase().startsWith(shortForm.toLowerCase()))
+    .filter((med) =>
+      med.code.toLowerCase().startsWith(shortForm.toLowerCase())
+    )
     .map((med) => `${med.code} - ${med.name}`);
 
   const handleAddNote = () => {
@@ -88,6 +91,7 @@ const DoctorNotes = ({ clinicId }) => {
 
     const newNote = {
       id: Date.now(),
+      dbId: null,  // NEW note: no DB id yet
       visitDate: noteDate,
       complaint: "",
       diagnosis: "",
@@ -109,122 +113,133 @@ const DoctorNotes = ({ clinicId }) => {
     );
   };
 
-const handleSave = async (id) => {
-  const note = doctorNotes.find((n) => n.id === id);
+  const handleSave = async (id) => {
+    const note = doctorNotes.find((n) => n.id === id);
 
-  try {
-    // 1. Save the doctor's note (without medicines)
-    await axios.post("/api/notes", {
-      clinicId,
-      visitDate: note.visitDate,
-      complaint: note.complaint,
-      diagnosis: note.diagnosis,
-      tests: note.tests,
-      prescription: note.prescription,
-      medicines: [], // no medicines here
-    });
+    try {
+      let savedNote;
+      if (note.dbId) {
+        // Existing note: UPDATE
+        savedNote = await axios.put(`/api/notes/${note.dbId}`, {
+          clinicId,
+          visitDate: note.visitDate,
+          complaint: note.complaint,
+          diagnosis: note.diagnosis,
+          tests: note.tests,
+          prescription: note.prescription,
+          medicines: [], // Always send an empty array
+        });
+      } else {
+        // New note: CREATE
+        savedNote = await axios.post("/api/notes", {
+          clinicId,
+          visitDate: note.visitDate,
+          complaint: note.complaint,
+          diagnosis: note.diagnosis,
+          tests: note.tests,
+          prescription: note.prescription,
+          medicines: [], // Always send an empty array
+        });
+      }
 
-    // 2. Save prescribed medicines separately
-    if (note.medicines.length > 0) {
-      const enrichedMedicines = note.medicines.map((med) => ({
-        ...med,
-        clinicId,
-        visitDate: note.visitDate,
-      }));
+      // Save medicines
+      if (note.medicines.length > 0) {
+        const enrichedMedicines = note.medicines.map((med) => ({
+          ...med,
+          clinicId,
+          visitDate: note.visitDate,
+        }));
 
-      await axios.post("/api/notes/prescriptions", {
-        clinicId,
-        visitDate: note.visitDate,
-        medicines: enrichedMedicines,
-      });
+        await axios.post("/api/notes/prescriptions", {
+          clinicId,
+          visitDate: note.visitDate,
+          medicines: enrichedMedicines,
+        });
+      }
+
+      // Update state: mark saved, store dbId
+      setDoctorNotes((prev) =>
+        prev.map((n) =>
+          n.id === id ? { ...n, saved: true, dbId: savedNote.data.id } : n
+        )
+      );
+    } catch (err) {
+      console.error("Error saving note:", err);
+      alert("Failed to save doctor's note.");
     }
-
-    setDoctorNotes((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, saved: true } : n))
-    );
-  } catch (err) {
-    console.error("Error saving note:", err);
-    alert("Failed to save doctor's note.");
-  }
-};
-
-
+  };
 
   const toggleDropdown = (id) => {
     setOpenNoteId((prev) => (prev === id ? null : id));
   };
 
-const handleMedicineAdd = async (
-  noteId,
-  code,
-  d1,
-  d2,
-  d3,
-  time,
-  days,
-  totalAmount,
-  unit,
-  bottleCount
-) => {
-  const backendType = getBackendType(unit); // "Kashya" if unit === "ml", else "Tablet"
-  const actualCode = code.split(" - ")[0]; // Extract only code
-  const med = medicines.find(
-    (m) => m.code === actualCode && m.type === backendType
-  );
+  const handleMedicineAdd = async (
+    noteId,
+    code,
+    d1,
+    d2,
+    d3,
+    time,
+    days,
+    totalAmount,
+    unit,
+    bottleCount
+  ) => {
+    const backendType = getBackendType(unit);
+    const actualCode = code.split(" - ")[0];
+    const med = medicines.find(
+      (m) => m.code === actualCode && m.type === backendType
+    );
 
-  if (!med) {
-    return alert(`Selected medicine (${actualCode} - ${backendType}) not found.`);
-  }
-
-  try {
-    // ✅ Deduct from backend
-    if (unit === "ml") {
-      await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, {
-        quantity: Number(bottleCount), // send bottle count as quantity
-      });
-    } else {
-      await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, {
-        quantity: Number(totalAmount), // send total tablets/capsules/spoons
-      });
+    if (!med) {
+      return alert(`Selected medicine (${actualCode} - ${backendType}) not found.`);
     }
 
-    // ✅ Refresh medicine list
-    await fetchMedicines();
+    try {
+      if (unit === "ml") {
+        await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, {
+          quantity: Number(bottleCount),
+        });
+      } else {
+        await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, {
+          quantity: Number(totalAmount),
+        });
+      }
 
-    // ✅ Update local note state with new medicine entry
-    setDoctorNotes((prev) =>
-      prev.map((note) =>
-        note.id === noteId
-          ? {
-              ...note,
-              medicines: [
-                ...note.medicines,
-                {
-                  code: med.code,
-                  name: med.name,
-                  dose1: d1,
-                  dose2: d2,
-                  dose3: d3,
-                  time,
-                  days,
-                  totalAmount,
-                  unit,
-                  bottleCount,
-                },
-              ],
-            }
-          : note
-      )
-    );
-  } catch (err) {
-    console.error("Error deducting medicine:", err);
-    alert(
-      err?.response?.data?.error ||
-      "Failed to deduct medicine from inventory."
-    );
-  }
-};
+      await fetchMedicines();
 
+      setDoctorNotes((prev) =>
+        prev.map((note) =>
+          note.id === noteId
+            ? {
+                ...note,
+                medicines: [
+                  ...note.medicines,
+                  {
+                    code: med.code,
+                    name: med.name,
+                    dose1: d1,
+                    dose2: d2,
+                    dose3: d3,
+                    time,
+                    days,
+                    totalAmount,
+                    unit,
+                    bottleCount,
+                  },
+                ],
+              }
+            : note
+        )
+      );
+    } catch (err) {
+      console.error("Error deducting medicine:", err);
+      alert(
+        err?.response?.data?.error ||
+          "Failed to deduct medicine from inventory."
+      );
+    }
+  };
 
   const handleSuggestionClick = (code) => {
     const matched = medicines.find((m) => `${m.code} - ${m.name}` === code);

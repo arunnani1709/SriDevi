@@ -20,7 +20,7 @@ const lowStockThresholds = {
 
 // Units mapping for display
 const unitLabels = {
-  Tablet: 'grams',
+  Tablet: 'No',
   Powder: 'grams',
   Kashya: 'No',
   Grutha: 'No',
