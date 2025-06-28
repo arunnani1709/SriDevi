@@ -104,7 +104,7 @@ const AddMedicine = () => {
             >
               <option value="">Select Medicine Type</option>
               <option value="Tablet">Tablet</option>
-              <option value="Kashya">Kashya</option>
+              <option value="Kashaya">Kashaya</option>
               <option value="Grutha">Grutha(Thuppa)</option>
               <option value="Thila">Thila(OIL)</option>
               <option value="Leha">Leha</option>

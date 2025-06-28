@@ -25,28 +25,28 @@ const AddInduviualPatientMedicine = ({
   doseTime,
   setDoseTime,
   handleAddMedicine,
+  setSelectedType,
 }) => {
   const [medicineType, setMedicineType] = useState("");
 
-  const manualQuantityTypes = ["Thila", "Linements", "NaselDrop", "Soap", "Paste", "Shampu"];
-  const quantityBoxTypes = [...manualQuantityTypes, "Leha", "Powder"];
+  const manualQuantityTypes = ["Thila", "Linements", "NaselDrop", "Soap", "Paste", "Shampu","Powder","Leha"];
+  const quantityBoxTypes = manualQuantityTypes;
   const hideDoseInputs = manualQuantityTypes.includes(medicineType);
 
-  useEffect(() => {
-    switch (medicineType) {
-      case "Kashaya":
-      case "Grutha":
-      case "Thila":
-        setUnit("ml");
-        break;
-      case "Powder":
-      case "Leha":
-        setUnit("gr");
-        break;
-      default:
-        setUnit("No");
-    }
-  }, [medicineType, setUnit]);
+ useEffect(() => {
+  switch (medicineType) {
+    case "Kashaya":
+    case "Grutha":
+   setUnit("ml");
+      break;
+    case "Powder":
+      setUnit("gr");
+      break;
+    default:
+      setUnit("No");
+  }
+}, [medicineType, setUnit]);
+
 
   return (
     <div className="bg-gray-50 p-4 border rounded">
@@ -67,15 +67,19 @@ const AddInduviualPatientMedicine = ({
           />
           {showSuggestions && filteredMedicines.length > 0 && (
             <ul className="absolute bg-white border rounded shadow-md w-full mt-1 z-50">
-              {filteredMedicines.map((code) => (
-                <li
-                  key={code}
-                  onClick={() => handleSuggestionClick(code)}
-                  className="px-3 py-1 text-sm hover:bg-green-100 cursor-pointer"
-                >
-                  {code} {medicineMap[code]}
-                </li>
-              ))}
+              {filteredMedicines.map((code, index) => {
+  const med = medicineMap[code]; // assuming { name, type } stored here
+  return (
+    <li
+      key={`${code}-${med?.name}-${med?.type}-${index}`}
+      onClick={() => handleSuggestionClick(code)}
+      className="px-3 py-1 text-sm hover:bg-green-100 cursor-pointer"
+    >
+      {code} - {med?.name} ({med?.type})
+    </li>
+  );
+})}
+
             </ul>
           )}
         </div>
@@ -83,7 +87,10 @@ const AddInduviualPatientMedicine = ({
         {/* Type dropdown */}
         <select
           value={medicineType}
-          onChange={(e) => setMedicineType(e.target.value)}
+          onChange={(e) => {
+    setMedicineType(e.target.value);
+    setSelectedType(e.target.value); // ✅ make sure this is included
+  }}
           className="border rounded p-2"
         >
           <option value="">Select Medicine Type</option>
@@ -148,7 +155,7 @@ const AddInduviualPatientMedicine = ({
               className="border rounded p-2 w-[100px] bg-gray-100"
             />
             <span className="text-sm text-gray-600">
-              {unit === "ml" ? "ml" : unit === "gr" ? "spoon" : "Tab"}
+              {unit === "ml" ? "ml" : unit === "gr" }
             </span>
           </div>
         )}

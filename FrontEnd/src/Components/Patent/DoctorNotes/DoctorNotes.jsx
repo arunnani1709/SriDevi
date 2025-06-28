@@ -2,7 +2,10 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import AddInduviualPatientMedicine from "../AddInduviualPatientMedicine/AddInduviualPatientMedicine";
 
-const getBackendType = (unit) => (unit === "ml" ? "Kashya" : "Tablet");
+const getBackendType = (unit, selectedType) => {
+  if (selectedType === "Grutha" || selectedType === "Kashaya") return selectedType;
+  return unit === "ml" ? "Kashaya" : "Tablet";
+};
 const getFrontendUnit = (type) => (type === "Kashya" ? "ml" : "No");
 
 const DoctorNotes = ({ clinicId }) => {
@@ -173,73 +176,79 @@ const DoctorNotes = ({ clinicId }) => {
     setOpenNoteId((prev) => (prev === id ? null : id));
   };
 
-  const handleMedicineAdd = async (
-    noteId,
-    code,
-    d1,
-    d2,
-    d3,
-    time,
-    days,
-    totalAmount,
-    unit,
-    bottleCount
-  ) => {
-    const backendType = getBackendType(unit);
-    const actualCode = code.split(" - ")[0];
-    const med = medicines.find(
-      (m) => m.code === actualCode && m.type === backendType
+ const handleMedicineAdd = async (
+  noteId,
+  code,
+  d1,
+  d2,
+  d3,
+  time,
+  days,
+  totalAmount,
+  unit,
+  bottleCount
+) => {
+  const backendType = getBackendType(unit, selectedType);
+  const actualCode = code.split(" - ")[0];
+
+  const med = medicines.find(
+    (m) => m.code === actualCode && m.type === backendType
+  );
+
+  if (!med) {
+    return alert(`Selected medicine (${actualCode} - ${backendType}) not found.`);
+  }
+
+  // calculate deduction quantity safely
+  const quantityToDeduct =unit === "ml" ? Number(bottleCount) : Number(totalAmount);
+  const bottleCountToSend = unit === "ml" ? Number(bottleCount) : undefined;
+
+  if (!quantityToDeduct || quantityToDeduct <= 0 ) {
+    return alert("Invalid quantity to deduct.");
+  }
+
+  try {
+ await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, {
+  quantity: quantityToDeduct,
+   bottleCount: bottleCountToSend,
+});
+
+
+    await fetchMedicines(); // refresh inventory
+
+    setDoctorNotes((prev) =>
+      prev.map((note) =>
+        note.id === noteId
+          ? {
+              ...note,
+              medicines: [
+                ...note.medicines,
+                {
+                  code: med.code,
+                  name: med.name,
+                  dose1: d1,
+                  dose2: d2,
+                  dose3: d3,
+                  time,
+                  days,
+                  totalAmount,
+                  unit,
+                  bottleCount,
+                },
+              ],
+            }
+          : note
+      )
     );
+  } catch (err) {
+    console.error("Error deducting medicine:", err);
+    alert(
+      err?.response?.data?.error ||
+        "Failed to deduct medicine from inventory."
+    );
+  }
+};
 
-    if (!med) {
-      return alert(`Selected medicine (${actualCode} - ${backendType}) not found.`);
-    }
-
-    try {
-      if (unit === "ml") {
-        await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, {
-          quantity: Number(bottleCount),
-        });
-      } else {
-        await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, {
-          quantity: Number(totalAmount),
-        });
-      }
-
-      await fetchMedicines();
-
-      setDoctorNotes((prev) =>
-        prev.map((note) =>
-          note.id === noteId
-            ? {
-                ...note,
-                medicines: [
-                  ...note.medicines,
-                  {
-                    code: med.code,
-                    name: med.name,
-                    dose1: d1,
-                    dose2: d2,
-                    dose3: d3,
-                    time,
-                    days,
-                    totalAmount,
-                    unit,
-                    bottleCount,
-                  },
-                ],
-              }
-            : note
-        )
-      );
-    } catch (err) {
-      console.error("Error deducting medicine:", err);
-      alert(
-        err?.response?.data?.error ||
-          "Failed to deduct medicine from inventory."
-      );
-    }
-  };
 
   const handleSuggestionClick = (code) => {
     const matched = medicines.find((m) => `${m.code} - ${m.name}` === code);
@@ -259,11 +268,18 @@ const DoctorNotes = ({ clinicId }) => {
       (Number(dose1 || 0) + Number(dose2 || 0) + Number(dose3 || 0)) *
       Number(value || 0);
     setTotalAmount(total > 0 ? total : "");
-    if (unit === "ml") {
-      setBottleCount(Math.ceil(total / 210));
-    } else {
-      setBottleCount("");
-    }
+  if (unit === "ml") {
+  const mlPerBottle =
+    selectedType === "Grutha"
+      ? 150
+      : selectedType === "Kashaya"
+      ? 210
+      : 1;// fallback
+  setBottleCount(Math.ceil(total / mlPerBottle));
+} else {
+  setBottleCount("");
+}
+
   };
 
   return (
@@ -352,7 +368,7 @@ const DoctorNotes = ({ clinicId }) => {
   selectedType={selectedType}
   setSelectedType={setSelectedType}
   handleAddMedicine={() => {
-    if (!days || !totalAmount)
+    if ( !totalAmount)
       return alert("Please enter valid doses and days.");
     handleMedicineAdd(
       note.id,

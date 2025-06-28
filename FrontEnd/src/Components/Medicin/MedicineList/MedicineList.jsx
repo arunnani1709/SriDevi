@@ -5,7 +5,7 @@ import Sidebar from '../../Sidebar/Sidebar';
 
 const lowStockThresholds = {
   Tablet: 100,
-  Kashya: 5,
+  Kasahya: 5,
   Grutha: 2,
   Thila: 2,
   Leha: 2,
@@ -22,7 +22,7 @@ const lowStockThresholds = {
 const unitLabels = {
   Tablet: 'No',
   Powder: 'grams',
-  Kashya: 'No',
+  Kasahya: 'No',
   Grutha: 'No',
   Thila: 'No',
   Leha: 'No',
