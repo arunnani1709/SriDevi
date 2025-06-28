@@ -27,7 +27,7 @@ export const Medicine = sequelize.define("Medicine", {
     validate: {
       isIn: [[
         "Tablet",
-        "Kashya",
+        "Kashaya",
         "Grutha",
         "Thila",
         "Leha",

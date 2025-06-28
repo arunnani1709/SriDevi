@@ -12,37 +12,30 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    // Step 1: Check for exact match (name + code + type)
     let medicine = await Medicine.findOne({
       where: { name, code, type },
     });
 
     if (medicine) {
-      // ✅ Exact match found, update quantity
       medicine.quantity += parseInt(quantity);
       await medicine.save();
       return res.json({ message: 'Medicine quantity updated.', medicine });
     }
 
-    // Step 2: Check if name + code exists with different type
     const sameNameCode = await Medicine.findOne({
       where: { name, code },
     });
 
     if (sameNameCode && sameNameCode.type !== type) {
-      // ✅ Different type, create new record
       const newMed = await Medicine.create({
         name,
         code,
         quantity: parseInt(quantity),
         type,
       });
-      return res
-        .status(201)
-        .json({ message: 'New type of medicine added.', medicine: newMed });
+      return res.status(201).json({ message: 'New type of medicine added.', medicine: newMed });
     }
 
-    // Step 3: Fully new medicine
     const newMed = await Medicine.create({
       name,
       code,
@@ -50,9 +43,7 @@ router.post('/', async (req, res) => {
       type,
     });
 
-    return res
-      .status(201)
-      .json({ message: 'New medicine added.', medicine: newMed });
+    return res.status(201).json({ message: 'New medicine added.', medicine: newMed });
   } catch (error) {
     console.error('Error saving medicine:', error);
     return res.status(500).json({ error: 'Internal server error.' });
@@ -60,58 +51,87 @@ router.post('/', async (req, res) => {
 });
 
 // ✅ Deduct medicine quantity by code + type
+// ✅ Deduct medicine quantity by code + type
 router.put('/:code/:type/deduct', async (req, res) => {
   const { code, type } = req.params;
   let { quantity, bottleCount } = req.body;
 
   try {
-    const medicine = await Medicine.findOne({
-      where: { code, type },
-    });
+    const medicine = await Medicine.findOne({ where: { code, type } });
 
     if (!medicine) {
       return res.status(404).json({ error: 'Medicine not found.' });
     }
 
-    // Convert bottleCount to ml if applicable
-    let deductionQuantity;
+    let deductionAmount = 0;
 
-    if (type === 'Kashya') {
-      const bottles = parseInt(bottleCount);
-      if (isNaN(bottles) || bottles <= 0) {
-        return res.status(400).json({ error: 'Valid bottle count is required for Kashya.' });
-      }
-      deductionQuantity = bottles * 210;
-    } else if (type === 'Grutha') {
-      const bottles = parseInt(bottleCount);
-      if (isNaN(bottles) || bottles <= 0) {
-        return res.status(400).json({ error: 'Valid bottle count is required for Grutha.' });
-      }
-      deductionQuantity = bottles * 150;
-    } else {
-      deductionQuantity = parseInt(quantity);
-      if (isNaN(deductionQuantity) || deductionQuantity <= 0) {
-        return res.status(400).json({ error: 'Valid quantity is required.' });
-      }
+    // ⚙️ Deduction logic per type
+    switch (type) {
+      case 'Tablet':
+      case 'Capsule':
+        if (!quantity) {
+          return res.status(400).json({ error: 'Quantity (tablets/capsules) is required.' });
+        }
+        deductionAmount = parseInt(quantity);
+        break;
+
+      case 'Kashaya':
+        if (!bottleCount) {
+          return res.status(400).json({ error: 'Bottle count required for Kashaya.' });
+        }
+        deductionAmount = parseInt(bottleCount) * 210; // 210ml per bottle
+        break;
+
+      case 'Grutha':
+        if (!bottleCount) {
+          return res.status(400).json({ error: 'Bottle count required for Grutha.' });
+        }
+        deductionAmount = parseInt(bottleCount) * 150; // 150ml per bottle
+        break;
+
+      case 'Powder':
+        if (!quantity) {
+          return res.status(400).json({ error: 'Quantity in grams is required.' });
+        }
+        deductionAmount = parseInt(quantity);
+        break;
+
+      case 'Thila':
+      case 'NaselDrop':
+      case 'Soap':
+      case 'Shampu':
+      case 'Linements':
+      case 'Leha':
+        if (!quantity) {
+          return res.status(400).json({ error: 'Manual quantity is required.' });
+        }
+        deductionAmount = parseInt(quantity);
+        break;
+
+      default:
+        return res.status(400).json({ error: `Invalid medicine type: ${type}` });
     }
 
-    if (medicine.quantity < deductionQuantity) {
+    if (isNaN(deductionAmount) || deductionAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid deduction amount.' });
+    }
+
+    if (medicine.quantity < deductionAmount) {
       return res.status(400).json({
-        error: `Not enough stock. Available: ${medicine.quantity}, Required: ${deductionQuantity}`,
+        error: `Insufficient stock. Available: ${medicine.quantity}, Required: ${deductionAmount}`,
       });
     }
 
-    medicine.quantity -= deductionQuantity;
+    medicine.quantity -= deductionAmount;
     await medicine.save();
 
-    return res.json({
-      message: 'Medicine stock deducted successfully.',
-      remainingQuantity: medicine.quantity,
-      medicine,
+    res.json({
+      message: 'Quantity deducted successfully',
+      remaining: medicine.quantity,
     });
   } catch (err) {
-    console.error('Error updating medicine:', err);
-    res.status(500).json({ error: 'Failed to deduct medicine stock.' });
+    console.error('Error deducting medicine:', err);
+    res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
