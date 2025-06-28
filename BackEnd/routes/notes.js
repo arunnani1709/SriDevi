@@ -106,35 +106,45 @@ router.post("/prescriptions", async (req, res) => {
   const { clinicId, visitDate, medicines } = req.body;
 
   try {
-    const note = await DoctorNote.findOne({
-      where: { clinicId, visitDate },
-    });
+    // ✅ Step 1: Find the note
+    const note = await DoctorNote.findOne({ where: { clinicId, visitDate } });
 
     if (!note) {
       return res.status(404).json({ error: "Doctor note not found." });
     }
 
-    // ✅ Delete existing medicines for this note
+    // ✅ Step 2: Optional cleanup (if replacing)
     await PrescribedMedicine.destroy({
       where: { noteId: note.id },
     });
 
-    // ✅ Insert new ones
-    const medicineData = medicines.map((med) => ({
-      ...med,
-      noteId: note.id,
+    // ✅ Step 3: Add new medicines with correct noteId
+    const newMeds = medicines.map((med) => ({
+      noteId: note.id, // ✅ from database
+      clinicId,
+      visitDate,
+      code: med.code,
+      name: med.name,
+      type: med.type,
+      dose1: med.dose1,
+      dose2: med.dose2,
+      dose3: med.dose3,
+      time: med.time,
+      days: med.days,
+      totalAmount: med.totalAmount,
+      unit: med.unit,
+      bottleCount: med.bottleCount,
     }));
 
-    await PrescribedMedicine.bulkCreate(medicineData);
+    await PrescribedMedicine.bulkCreate(newMeds);
 
-    res
-      .status(201)
-      .json({ message: "Prescribed medicines replaced successfully." });
-  } catch (error) {
-    console.error("Error saving medicines:", error);
-    res.status(500).json({ error: "Failed to save prescribed medicines." });
+    res.status(200).json({ message: "Medicines saved successfully" });
+  } catch (err) {
+    console.error("Error saving prescribed medicines:", err);
+    res.status(500).json({ error: "Failed to save medicines" });
   }
 });
+
 
 router.put("/:id", async (req, res) => {
   const noteId = req.params.id;

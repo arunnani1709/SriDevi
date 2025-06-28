@@ -32,6 +32,10 @@ const PrescribedMedicine = sequelize.define(
     name: {
       type: DataTypes.STRING,
     },
+     type: {
+      type: DataTypes.STRING,
+      allowNull: false, // ✅ new field to match deduction logic
+    },
     dose1: {
       type: DataTypes.STRING,
     },
@@ -72,5 +76,22 @@ DoctorNote.hasMany(PrescribedMedicine, {
 PrescribedMedicine.belongsTo(DoctorNote, {
   foreignKey: "noteId",
 });
+// migrations/20250628XXXXXX-add-type-to-prescribedmedicines.js
+
+// migrations/20250628_add-type-to-prescribedmedicines.js
+
+export async function up(queryInterface, Sequelize) {
+  await queryInterface.addColumn("PrescribedMedicines", "type", {
+    type: Sequelize.STRING,
+    allowNull: false,
+    defaultValue: "Tablet",
+  });
+}
+
+export async function down(queryInterface, Sequelize) {
+  await queryInterface.removeColumn("PrescribedMedicines", "type");
+}
+
+
 
 export default PrescribedMedicine;
