@@ -34,7 +34,7 @@ export const Medicine = sequelize.define("Medicine", {
         "Linements",
         "Capsule",
         "Powder",
-        "Naseldrop",
+        "NaselDrop",
         "Soap",
         "Paste",
         "Shampu"

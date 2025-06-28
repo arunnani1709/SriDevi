@@ -60,13 +60,15 @@ router.put('/:code/:type/deduct', async (req, res) => {
     const medicine = await Medicine.findOne({ where: { code, type } });
 
     if (!medicine) {
-      return res.status(404).json({ error: 'Medicine not found.' });
+      return res.status(404).json({ error: `Medicine not found for type ${type}.` });
     }
 
     let deductionAmount = 0;
 
-    // ⚙️ Deduction logic per type
-    switch (type) {
+    // Normalize type (optional safety)
+    const normalizedType = type.trim();
+
+    switch (normalizedType) {
       case 'Tablet':
       case 'Capsule':
         if (!quantity) {
@@ -79,37 +81,38 @@ router.put('/:code/:type/deduct', async (req, res) => {
         if (!bottleCount) {
           return res.status(400).json({ error: 'Bottle count required for Kashaya.' });
         }
-        deductionAmount = parseInt(bottleCount) * 210; // 210ml per bottle
+        deductionAmount = parseInt(bottleCount); // 210ml per bottle
         break;
 
       case 'Grutha':
         if (!bottleCount) {
           return res.status(400).json({ error: 'Bottle count required for Grutha.' });
         }
-        deductionAmount = parseInt(bottleCount) * 150; // 150ml per bottle
+        deductionAmount = parseInt(bottleCount) ; // 150ml per bottle
         break;
 
       case 'Powder':
+      case 'Leha':
         if (!quantity) {
           return res.status(400).json({ error: 'Quantity in grams is required.' });
         }
         deductionAmount = parseInt(quantity);
         break;
 
-      case 'Thila':
       case 'NaselDrop':
+      case 'Thila': // In case frontend sends this spelling
+      case 'Paste':
       case 'Soap':
       case 'Shampu':
       case 'Linements':
-      case 'Leha':
         if (!quantity) {
-          return res.status(400).json({ error: 'Manual quantity is required.' });
+          return res.status(400).json({ error: `Manual quantity is required for ${type}.` });
         }
         deductionAmount = parseInt(quantity);
         break;
 
       default:
-        return res.status(400).json({ error: `Invalid medicine type: ${type}` });
+        return res.status(400).json({ error: `Invalid or unsupported medicine type: ${type}` });
     }
 
     if (isNaN(deductionAmount) || deductionAmount <= 0) {
@@ -122,18 +125,20 @@ router.put('/:code/:type/deduct', async (req, res) => {
       });
     }
 
+    // ✅ Deduct stock
     medicine.quantity -= deductionAmount;
     await medicine.save();
 
-    res.json({
-      message: 'Quantity deducted successfully',
+    res.status(200).json({
+      message: `Deducted ${deductionAmount} from ${type} stock.`,
       remaining: medicine.quantity,
     });
   } catch (err) {
-    console.error('Error deducting medicine:', err);
-    res.status(500).json({ error: 'Internal server error.' });
+    console.error('Error in deduction route:', err);
+    res.status(500).json({ error: 'Internal server error during stock deduction.' });
   }
 });
+
 
 
 // ✅ Get all medicines

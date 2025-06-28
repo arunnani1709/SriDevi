@@ -4,15 +4,19 @@ import AddInduviualPatientMedicine from "../AddInduviualPatientMedicine/AddInduv
 
 const getBackendType = (unit, selectedType) => {
   if (selectedType === "Grutha" || selectedType === "Kashaya") return selectedType;
-  return unit === "ml" ? "Kashaya" : "Tablet";
+  if (["NaselDrop", "Thaila", "Soap", "Shampu", "Linements"].includes(selectedType)) {
+    return selectedType;
+  }
+  if (unit === "ml") return "Kashaya";
+  return selectedType || "Tablet";
 };
-const getFrontendUnit = (type) => (type === "Kashya" ? "ml" : "No");
+
+const getFrontendUnit = (type) => (type === "Kashaya" ? "ml" : "No");
 
 const DoctorNotes = ({ clinicId }) => {
   const [doctorNotes, setDoctorNotes] = useState([]);
   const [openNoteId, setOpenNoteId] = useState(null);
   const [noteDate, setNoteDate] = useState("");
-
   const [shortForm, setShortForm] = useState("");
   const [dose1, setDose1] = useState("");
   const [dose2, setDose2] = useState("");
@@ -28,73 +32,42 @@ const DoctorNotes = ({ clinicId }) => {
   const [selectedType, setSelectedType] = useState("");
 
   useEffect(() => {
-    fetchMedicines();
+    axios.get("/api/medicines").then((res) => setMedicines(res.data)).catch(console.error);
   }, []);
 
   useEffect(() => {
-    const fetchNotesByClinic = async () => {
-      try {
-        const res = await axios.get(`/api/notes/clinic/${clinicId}`);
-        const sorted = res.data.sort(
-          (a, b) => new Date(b.visitDate) - new Date(a.visitDate)
-        );
-        const enriched = sorted.map((note, idx, arr) => {
-          let daysSinceLastVisit = null;
-          if (idx < arr.length - 1) {
-            const prev = new Date(arr[idx + 1].visitDate);
-            const curr = new Date(note.visitDate);
-            daysSinceLastVisit = Math.ceil(
-              (curr - prev) / (1000 * 60 * 60 * 24)
-            );
-          }
-          return {
-            ...note,
-            id: note.id,       // local id for React
-            dbId: note.id,     // DB primary key
-            saved: true,
-            medicines: note.medicines || [],
-            daysSinceLastVisit,
-          };
-        });
-        setDoctorNotes(enriched);
-      } catch (err) {
-        console.error("Error fetching notes by clinic:", err);
-      }
-    };
-
-    if (clinicId) fetchNotesByClinic();
+    if (!clinicId) return;
+    axios.get(`/api/notes/clinic/${clinicId}`).then((res) => {
+      const sorted = res.data.sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
+      const enriched = sorted.map((note, idx, arr) => {
+        let daysSinceLastVisit = null;
+        if (idx < arr.length - 1) {
+          const prev = new Date(arr[idx + 1].visitDate);
+          const curr = new Date(note.visitDate);
+          daysSinceLastVisit = Math.ceil((curr - prev) / (1000 * 60 * 60 * 24));
+        }
+        return {
+          ...note,
+          id: note.id,
+          dbId: note.id,
+          saved: true,
+          medicines: note.medicines || [],
+          daysSinceLastVisit,
+        };
+      });
+      setDoctorNotes(enriched);
+    }).catch(console.error);
   }, [clinicId]);
 
-  const fetchMedicines = () => {
-    axios
-      .get("/api/medicines")
-      .then((res) => setMedicines(res.data))
-      .catch((err) => console.error("Error fetching medicines:", err));
-  };
-
-  const filteredMedicines = medicines
-    .filter((med) =>
-      med.code.toLowerCase().startsWith(shortForm.toLowerCase())
-    )
-    .map((med) => `${med.code} - ${med.name}`);
+  const filteredMedicines = medicines.filter((med) =>
+    med.code.toLowerCase().startsWith(shortForm.toLowerCase())
+  ).map((med) => `${med.code} - ${med.name}`);
 
   const handleAddNote = () => {
     if (!noteDate) return alert("Please enter a date before adding a note.");
-    const newVisitDate = new Date(noteDate);
-    const sortedNotes = doctorNotes
-      .filter((n) => n.visitDate)
-      .sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
-
-    let daysDifference = null;
-    if (sortedNotes.length > 0) {
-      const lastVisitDate = new Date(sortedNotes[0].visitDate);
-      const diffTime = newVisitDate.getTime() - lastVisitDate.getTime();
-      daysDifference = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    }
-
     const newNote = {
       id: Date.now(),
-      dbId: null,  // NEW note: no DB id yet
+      dbId: null,
       visitDate: noteDate,
       complaint: "",
       diagnosis: "",
@@ -102,153 +75,93 @@ const DoctorNotes = ({ clinicId }) => {
       prescription: "",
       medicines: [],
       saved: false,
-      daysSinceLastVisit: daysDifference,
+      daysSinceLastVisit: null,
     };
-
     setDoctorNotes((prev) => [...prev, newNote]);
     setNoteDate("");
     setOpenNoteId(newNote.id);
   };
 
   const handleChange = (id, field, value) => {
-    setDoctorNotes((prev) =>
-      prev.map((note) => (note.id === id ? { ...note, [field]: value } : note))
-    );
+    setDoctorNotes((prev) => prev.map((note) => note.id === id ? { ...note, [field]: value } : note));
   };
 
   const handleSave = async (id) => {
     const note = doctorNotes.find((n) => n.id === id);
-
     try {
       let savedNote;
       if (note.dbId) {
-        // Existing note: UPDATE
-        savedNote = await axios.put(`/api/notes/${note.dbId}`, {
-          clinicId,
-          visitDate: note.visitDate,
-          complaint: note.complaint,
-          diagnosis: note.diagnosis,
-          tests: note.tests,
-          prescription: note.prescription,
-          medicines: [], // Always send an empty array
-        });
+        savedNote = await axios.put(`/api/notes/${note.dbId}`, { ...note, clinicId, medicines: [] });
       } else {
-        // New note: CREATE
-        savedNote = await axios.post("/api/notes", {
-          clinicId,
-          visitDate: note.visitDate,
-          complaint: note.complaint,
-          diagnosis: note.diagnosis,
-          tests: note.tests,
-          prescription: note.prescription,
-          medicines: [], // Always send an empty array
-        });
+        savedNote = await axios.post("/api/notes", { ...note, clinicId, medicines: [] });
       }
-
-      // Save medicines
       if (note.medicines.length > 0) {
         const enrichedMedicines = note.medicines.map((med) => ({
           ...med,
           clinicId,
           visitDate: note.visitDate,
+          type: med.type || getBackendType(med.unit, med.selectedType),
         }));
-
         await axios.post("/api/notes/prescriptions", {
           clinicId,
           visitDate: note.visitDate,
           medicines: enrichedMedicines,
         });
       }
-
-      // Update state: mark saved, store dbId
-      setDoctorNotes((prev) =>
-        prev.map((n) =>
-          n.id === id ? { ...n, saved: true, dbId: savedNote.data.id } : n
-        )
-      );
+      setDoctorNotes((prev) => prev.map((n) => n.id === id ? { ...n, saved: true, dbId: savedNote.data.id } : n));
     } catch (err) {
       console.error("Error saving note:", err);
       alert("Failed to save doctor's note.");
     }
   };
 
-  const toggleDropdown = (id) => {
-    setOpenNoteId((prev) => (prev === id ? null : id));
+  const handleMedicineAdd = async (noteId, code, d1, d2, d3, time, days, totalAmount, unit, bottleCount) => {
+    if (!selectedType) {
+      alert("Please select a medicine type.");
+      return;
+    }
+    const backendType = getBackendType(unit, selectedType);
+    const actualCode = code.split(" - ")[0];
+
+    const med = medicines.find(
+      (m) =>
+         m.code.trim().toLowerCase() === actualCode.trim().toLowerCase() &&
+    m.type.trim().toLowerCase() === backendType.trim().toLowerCase()
+    );
+
+    if (!med) return alert(`Selected medicine (${actualCode} - ${backendType}) not found.`);
+
+    const payload = backendType === "Kashaya" || backendType === "Grutha"
+      ? { bottleCount: Number(bottleCount) }
+      : { quantity: Number(totalAmount) };
+
+    if ((payload.quantity && payload.quantity <= 0) || (payload.bottleCount && payload.bottleCount <= 0)) {
+      return alert("Invalid quantity to deduct.");
+    }
+    try {
+      await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, payload);
+      const newMedicine = {
+        code: med.code,
+        name: med.name,
+        dose1: d1,
+        dose2: d2,
+        dose3: d3,
+        time,
+        days,
+        totalAmount,
+        unit,
+        bottleCount,
+        type: backendType,
+        selectedType,
+      };
+      setDoctorNotes((prev) => prev.map((note) =>
+        note.id === noteId ? { ...note, medicines: [...note.medicines, newMedicine] } : note
+      ));
+    } catch (err) {
+      console.error("Error deducting medicine:", err);
+      alert(err?.response?.data?.error || "Failed to deduct medicine from inventory.");
+    }
   };
-
- const handleMedicineAdd = async (
-  noteId,
-  code,
-  d1,
-  d2,
-  d3,
-  time,
-  days,
-  totalAmount,
-  unit,
-  bottleCount
-) => {
-  const backendType = getBackendType(unit, selectedType);
-  const actualCode = code.split(" - ")[0];
-
-  const med = medicines.find(
-    (m) => m.code === actualCode && m.type === backendType
-  );
-
-  if (!med) {
-    return alert(`Selected medicine (${actualCode} - ${backendType}) not found.`);
-  }
-
-  // calculate deduction quantity safely
-  const quantityToDeduct =unit === "ml" ? Number(bottleCount) : Number(totalAmount);
-  const bottleCountToSend = unit === "ml" ? Number(bottleCount) : undefined;
-
-  if (!quantityToDeduct || quantityToDeduct <= 0 ) {
-    return alert("Invalid quantity to deduct.");
-  }
-
-  try {
- await axios.put(`/api/medicines/${actualCode}/${backendType}/deduct`, {
-  quantity: quantityToDeduct,
-   bottleCount: bottleCountToSend,
-});
-
-
-    await fetchMedicines(); // refresh inventory
-
-    setDoctorNotes((prev) =>
-      prev.map((note) =>
-        note.id === noteId
-          ? {
-              ...note,
-              medicines: [
-                ...note.medicines,
-                {
-                  code: med.code,
-                  name: med.name,
-                  dose1: d1,
-                  dose2: d2,
-                  dose3: d3,
-                  time,
-                  days,
-                  totalAmount,
-                  unit,
-                  bottleCount,
-                },
-              ],
-            }
-          : note
-      )
-    );
-  } catch (err) {
-    console.error("Error deducting medicine:", err);
-    alert(
-      err?.response?.data?.error ||
-        "Failed to deduct medicine from inventory."
-    );
-  }
-};
-
 
   const handleSuggestionClick = (code) => {
     const matched = medicines.find((m) => `${m.code} - ${m.name}` === code);
@@ -256,6 +169,7 @@ const DoctorNotes = ({ clinicId }) => {
       setShortForm(code);
       setUnit(getFrontendUnit(matched.type));
       setFullForm(matched.name);
+      setSelectedType(matched.type); // ✅ important fix
     } else {
       setShortForm(code);
     }
@@ -264,22 +178,17 @@ const DoctorNotes = ({ clinicId }) => {
 
   const updateDays = (value) => {
     setDays(value);
-    const total =
-      (Number(dose1 || 0) + Number(dose2 || 0) + Number(dose3 || 0)) *
-      Number(value || 0);
+    const total = (Number(dose1 || 0) + Number(dose2 || 0) + Number(dose3 || 0)) * Number(value || 0);
     setTotalAmount(total > 0 ? total : "");
-  if (unit === "ml") {
-  const mlPerBottle =
-    selectedType === "Grutha"
-      ? 150
-      : selectedType === "Kashaya"
-      ? 210
-      : 1;// fallback
-  setBottleCount(Math.ceil(total / mlPerBottle));
-} else {
-  setBottleCount("");
-}
-
+    if (unit === "ml") {
+      const mlPerBottle = selectedType === "Grutha" ? 150 : selectedType === "Kashaya" ? 210 : 1;
+      setBottleCount(Math.ceil(total / mlPerBottle));
+    } else {
+      setBottleCount("");
+    }
+  };
+  const toggleDropdown = (id) => {
+    setOpenNoteId(openNoteId === id ? null : id);
   };
 
   return (

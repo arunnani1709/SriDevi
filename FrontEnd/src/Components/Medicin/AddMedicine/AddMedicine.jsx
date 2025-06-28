@@ -110,7 +110,7 @@ const AddMedicine = () => {
               <option value="Leha">Leha</option>
               <option value="Linements">Linements(Ayntment)</option>
               <option value="Powder">Powder</option>
-              <option value="Naseldrop">NaselDrop</option>
+              <option value="NaselDrop">NaselDrop</option>
               <option value="Capsule">Capsule</option>
               <option value="Soap">Soap</option>
               <option value="Paste">Paste</option>
