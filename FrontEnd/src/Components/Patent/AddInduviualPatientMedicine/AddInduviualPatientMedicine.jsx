@@ -29,9 +29,11 @@ const AddInduviualPatientMedicine = ({
 }) => {
   const [medicineType, setMedicineType] = useState("");
 
-  const manualQuantityTypes = ["Thila", "Linements", "NaselDrop", "Soap", "Paste", "Shampu","Powder","Leha"];
-  const quantityBoxTypes = manualQuantityTypes;
-  const hideDoseInputs = manualQuantityTypes.includes(medicineType);
+ const manualQuantityTypes = ["Thila", "Linements", "NaselDrop", "Soap", "Paste", "Shampu", "Powder", "Leha"];
+const doseAllowedTypes = ["Thila", "Linements", "NaselDrop", "Powder", "Leha"];
+const quantityBoxTypes = manualQuantityTypes;
+const hideDoseInputs = !doseAllowedTypes.includes(medicineType) && manualQuantityTypes.includes(medicineType);
+
 
  useEffect(() => {
   switch (medicineType) {
@@ -127,7 +129,6 @@ const AddInduviualPatientMedicine = ({
         ))}
 
         {/* Days input */}
-        {!hideDoseInputs && (
           <input
             type="number"
             placeholder="Days"
@@ -135,7 +136,7 @@ const AddInduviualPatientMedicine = ({
             onChange={(e) => updateDays(e.target.value)}
             className="border rounded p-2 w-[70px]"
           />
-        )}
+    
 
         {/* Quantity input (manual input for some types) */}
         {quantityBoxTypes.includes(medicineType) ? (
