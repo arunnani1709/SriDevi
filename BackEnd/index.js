@@ -1,5 +1,7 @@
+// index.js
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import dotenv from "dotenv";
 import sequelize from "./config/db.js";
 
@@ -8,32 +10,44 @@ import patientRoutes from "./routes/patients.js";
 import medicineRoutes from "./routes/medicines.js";
 import notesRoutes from "./routes/notes.js";
 
-// Initialize environment and middlewares
+// Load environment variables
 dotenv.config();
-const app = express();
-app.use(cors());
-app.use(express.json());
 
-// Load models and associations
+const app = express();
+
+// ✅ Security middlewares
+app.use(helmet()); // Sets secure HTTP headers
+app.use(cors()); // Allows cross-origin requests
+app.use(express.json()); // Parses JSON request bodies
+
+// ✅ Load models (so Sequelize knows them)
 import "./models/DoctorNote.js";
 import "./models/PrescribedMedicine.js";
-import "./models/associations.js"; // ⬅️ contains all relationships
+import "./models/associations.js"; // Contains your relationships
 
-// Register API routes
+// ✅ API routes
 app.use("/api/patients", patientRoutes);
 app.use("/api/medicines", medicineRoutes);
 app.use("/api/notes", notesRoutes);
 
-// Start server
+// ✅ Health check endpoint (optional but useful)
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+// ✅ Start server
 const PORT = process.env.PORT || 3001;
-sequelize
-  .sync() // you can also use { alter: true } for dev mode
-  .then(() => {
-    console.log("✅ Database synced");
+
+(async () => {
+  try {
+    await sequelize.authenticate();
+    console.log("✅ Database connection established");
+
     app.listen(PORT, () => {
       console.log(`🚀 Server running at http://localhost:${PORT}`);
     });
-  })
-  .catch((err) => {
-    console.error("❌ Failed to connect to DB:", err);
-  });
+  } catch (err) {
+    console.error("❌ Failed to connect to the database:", err);
+    process.exit(1); // Exit the process if DB connection fails
+  }
+})();
