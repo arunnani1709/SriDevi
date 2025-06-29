@@ -31,6 +31,15 @@ const DoctorNotes = ({ clinicId }) => {
   const [fullForm, setFullForm] = useState("");
   const [selectedType, setSelectedType] = useState("");
 
+    const hideTimeTypes = [
+    "Thila",
+    "Linements",
+    "NaselDrop",
+    "Soap",
+    "Paste",
+    "Shampu",
+  ];
+
   useEffect(() => {
     axios.get("/api/medicines").then((res) => setMedicines(res.data)).catch(console.error);
   }, []);
@@ -177,16 +186,23 @@ const DoctorNotes = ({ clinicId }) => {
   };
 
   const updateDays = (value) => {
-    setDays(value);
-    const total = (Number(dose1 || 0) + Number(dose2 || 0) + Number(dose3 || 0)) * Number(value || 0);
+  setDays(value);
+  const manualTypes = ["Thila", "Linements", "NaselDrop", "Powder", "Leha"];
+
+  const total = (Number(dose1 || 0) + Number(dose2 || 0) + Number(dose3 || 0)) * Number(value || 0);
+
+  if (!manualTypes.includes(selectedType)) {
     setTotalAmount(total > 0 ? total : "");
-    if (unit === "ml") {
-      const mlPerBottle = selectedType === "Grutha" ? 150 : selectedType === "Kashaya" ? 210 : 1;
-      setBottleCount(Math.ceil(total / mlPerBottle));
-    } else {
-      setBottleCount("");
-    }
-  };
+  }
+
+  if (unit === "ml" && !manualTypes.includes(selectedType)) {
+    const mlPerBottle = selectedType === "Grutha" ? 150 : selectedType === "Kashaya" ? 210 : 1;
+    setBottleCount(Math.ceil(total / mlPerBottle));
+  } else {
+    setBottleCount("");
+  }
+};
+
   const toggleDropdown = (id) => {
     setOpenNoteId(openNoteId === id ? null : id);
   };
@@ -326,6 +342,8 @@ const DoctorNotes = ({ clinicId }) => {
                         <div className="text-xs text-gray-500">Medicine</div>
                         <div className="font-medium">{med.name}</div>
                       </div>
+                      {!["Soap", "Paste", "Shampu"].includes(med.selectedType || med.type) && (
+  <>
                       <div className="w-16 text-center">
                         <div className="text-xs text-gray-500">Morn</div>
                         <div>{med.dose1}</div>
@@ -338,16 +356,21 @@ const DoctorNotes = ({ clinicId }) => {
                         <div className="text-xs text-gray-500">Eve</div>
                         <div>{med.dose3}</div>
                       </div>
-                      <div className="w-28 text-center">
-                        <div className="text-xs text-gray-500">Time</div>
-                        <div>
-                          {{
-                            "B/F": "Before Food",
-                            "A/F": "After Food",
-                            "I/B/F": "In Between Food",
-                          }[med.time] || med.time}
-                        </div>
-                      </div>
+                      </>
+                      )}
+                       {/* ✅ Only show Time if not in excluded types */}
+    {!hideTimeTypes.includes(med.selectedType || med.type ) && (
+      <div className="w-28 text-center">
+        <div className="text-xs text-gray-500">Time</div>
+        <div>
+          {{
+            "B/F": "Before Food",
+            "A/F": "After Food",
+            "I/B/F": "In Between Food",
+          }[med.time] || med.time}
+        </div>
+      </div>
+    )}
                       <div className="w-20 text-center">
                         <div className="text-xs text-gray-500">Days</div>
                         <div>{med.days}</div>
