@@ -1,16 +1,27 @@
 // src/components/LoginPage/Login.jsx
-import React, { useState } from "react";
-import { useDispatch } from "react-redux";
-import { loginUser } from "./authSlice";
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser, logout } from "./authSlice";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import ClinicLogo from "../../Photos/Clinic.jpg"; // ✅ Import logo
+import ClinicLogo from "../../Photos/Clinic.jpg";
 
 const Login = () => {
   const [credentials, setCredentials] = useState({ username: "", password: "" });
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { isAuthenticated } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    dispatch(logout()); // clear session on load
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/Home");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e) => {
     setCredentials({ ...credentials, [e.target.name]: e.target.value });
@@ -36,7 +47,7 @@ const Login = () => {
         backgroundSize: "300px",
         backgroundPosition: "top center",
         backgroundRepeat: "no-repeat",
-        paddingTop: "180px", // Adjust to push form below the logo
+        paddingTop: "180px",
       }}
     >
       <div className="w-full max-w-md bg-white bg-opacity-90 shadow-xl rounded-xl p-8">
