@@ -25,12 +25,23 @@ const Home = () => {
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentImage((prev) => (prev + 1) % sliderImages.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [sliderImages.length]);
+ useEffect(() => {
+  const handlePopState = () => {
+    sessionStorage.clear(); // Clear sessionStorage when navigating back
+  };
+
+  window.addEventListener('popstate', handlePopState);
+
+  const interval = setInterval(() => {
+    setCurrentImage((prev) => (prev + 1) % sliderImages.length);
+  }, 3000);
+
+  return () => {
+    window.removeEventListener('popstate', handlePopState); // Clean up popstate listener
+    clearInterval(interval); // Clean up interval
+  };
+}, [sliderImages.length]);
+
 
   return (
     <div className="flex flex-col min-h-screen">
